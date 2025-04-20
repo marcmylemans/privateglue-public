@@ -1,7 +1,7 @@
 ## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/<your-username>/privateglue-public.git
+git clone https://github.com/marcmylemans/privateglue-public.git
 cd privateglue-public
 docker-compose up -d
 ```
