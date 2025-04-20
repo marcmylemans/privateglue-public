@@ -8,7 +8,5 @@ services:
       - ./notes:/app/notes
       - ./data:/app/data
       - secretkey:/app/secret  # use a named volume
-    env_file:
-      - .env
 volumes:
   secretkey:
