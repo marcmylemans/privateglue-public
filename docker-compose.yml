@@ -1,0 +1,14 @@
+version: "3.8"
+services:
+  privateglue:
+    image: ghcr.io/marcmylemans/privateglue:latest
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./notes:/app/notes
+      - ./data:/app/data
+      - secretkey:/app/secret  # use a named volume
+    env_file:
+      - .env
+volumes:
+  secretkey:
