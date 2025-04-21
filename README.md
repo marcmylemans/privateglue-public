@@ -66,6 +66,12 @@ More setup details coming soon...
 
 ---
 
+## 📜 Changelog
+ 
+For a complete list of changes and versions, check out the [CHANGELOG.md](./CHANGELOG.md).
+
+---
+
 ## ❤️ Sponsor / Support
 
 If you like this project, consider [starring ⭐ it on GitHub](https://github.com/marcmylemans/privateglue-public)  
