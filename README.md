@@ -47,7 +47,7 @@ Ideal for:
 ```bash
 git clone https://github.com/marcmylemans/privateglue-public.git
 cd privateglue-public
-docker-compose up --build
+docker-compose up
 ```
 
 3. Open `http://localhost:5000` and start documenting your gear!
