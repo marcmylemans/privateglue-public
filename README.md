@@ -1,45 +1,45 @@
-# 🧩 PrivateGlue
+# PrivateGlue
 
 **PrivateGlue** is a simple, self-hosted web app for linking devices, notes, and credentials, helping IT professionals and homelabbers keep everything organized and secure.
 
 Ideal for:
-- 🧑‍💻 Freelancers and consultants juggling multiple client systems
-- 🏠 Home lab enthusiasts documenting hardware and configurations
-- 🏢 Small businesses needing internal IT asset tracking
-- 🔒 Anyone looking to store credentials privately with encryption
+- Freelancers and consultants juggling multiple client systems
+- Home lab enthusiasts documenting hardware and configurations
+- Small businesses needing internal IT asset tracking
+- Anyone looking to store credentials privately with encryption
 
 ---
 
-## ✨ Features
+## Features
 
-- 📒 **Notes with Markdown** and device linking
-- 🔐 **Password manager** with encryption and copy-to-clipboard
-- 🧩 **Device inventory** with tags for location and type
-- 📎 **Link notes and credentials to devices**
-- 🌙 **Dark Mode Support**
-- 🛠️ Built with Flask, SQLite, Bootstrap 5
+- **Notes with Markdown** and device linking
+- **Password manager** with encryption and copy-to-clipboard
+- **Device inventory** with tags for location and type
+- **Link notes and credentials to devices**
+- **Dark Mode Support**
+- Built with Flask, SQLite, Bootstrap 5
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
-### 🧱 Dashboard Overview
+### Dashboard Overview
 ![Dashboard Overview](https://mylemans.online/assets/img/privateglue/dashboard.png)
 
-### 🖥️ Device View
+### Device View
 ![Device View](https://mylemans.online/assets/img/privateglue/device.png)
 
-### 📝 Create a Note
+### Create a Note
 ![Create Note](https://mylemans.online/assets/img/privateglue/note.png)
 
-### 🔑 Add Credential
+### Add Credential
 ![Add Credential](https://mylemans.online/assets/img/privateglue/credential.png)
 
-> _📷 Screenshots taken from version 0.6.2_
+> _Screenshots taken from version 0.6.2_
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 1. Clone this repository.
 2. Run using Docker:
@@ -56,7 +56,7 @@ More setup details coming soon...
 
 ---
 
-## 💡 Use Case Examples
+## Use Case Examples
 
 - Save login credentials per server/router/switch
 - Track device locations and types (lab, office, rack)
@@ -66,13 +66,13 @@ More setup details coming soon...
 
 ---
 
-## 📜 Changelog
+## Changelog
  
 For a complete list of changes and versions, check out the [CHANGELOG.md](.source/documentation/CHANGELOG.md).
 
 ---
 
-## ❤️ Sponsor / Support
+## ❤️ Support
 
 If you like this project, consider [starring ⭐ it on GitHub](https://github.com/marcmylemans/privateglue-public)  
 For feedback, suggestions, or bug reports, feel free to open an issue.
