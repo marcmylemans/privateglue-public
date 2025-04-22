@@ -7,6 +7,7 @@ services:
     volumes:
       - ./notes:/app/notes
       - ./data:/app/data
+      - ./backups:/app/backups
       - secretkey:/app/secret  # use a named volume
 volumes:
   secretkey:
