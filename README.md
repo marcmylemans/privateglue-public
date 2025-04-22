@@ -68,7 +68,7 @@ More setup details coming soon...
 
 ## 📜 Changelog
  
-For a complete list of changes and versions, check out the [CHANGELOG.md](./CHANGELOG.md).
+For a complete list of changes and versions, check out the [CHANGELOG.md](.source/documentation/CHANGELOG.md).
 
 ---
 
