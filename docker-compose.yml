@@ -9,5 +9,6 @@ services:
       - ./data:/app/data
       - ./backups:/app/backups
       - secretkey:/app/secret  # use a named volume
+    restart: always
 volumes:
   secretkey:
