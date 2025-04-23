@@ -1,64 +1,80 @@
 {% extends "base.html" %}
-{% block title %}Notes{% endblock %}
+{% block title %}Notes - PrivateGlue{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Notes</h2>
-    <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Add Note</a>
-  </div>
+<div class="container-fluid mt-4">
+  <div class="row">
+    <!-- Sidebar Filters -->
+    <div class="col-md-3 mb-4">
+      <h5 class="mb-3">Filters</h5>
+      <form method="GET" action="{{ url_for('notes.list_notes') }}">
+        <div class="mb-3">
+          <label for="tag" class="form-label">Tag</label>
+          <select name="tag" id="tag" class="form-select">
+            <option value="">-- All Tags --</option>
+            {% for tag in all_tags %}
+              <option value="{{ tag }}" {% if filter_tag == tag %}selected{% endif %}>{{ tag }}</option>
+            {% endfor %}
+          </select>
+        </div>
 
-  {% if filter_tag or filter_device %}
-    <div class="alert alert-info d-flex justify-content-between align-items-center">
-      <div>
-        {% if filter_tag %}
-          <span class="badge bg-info me-2">Tag: {{ filter_tag }}</span>
-        {% endif %}
-        {% if filter_device %}
-          <span class="badge bg-info">Device: 
-            {{ all_devices | selectattr("id", "equalto", filter_device | int) | map(attribute="hostname") | list | first }}
-          </span>
-        {% endif %}
-      </div>
-      <a href="{{ url_for('notes.list_notes', clear=1) }}" class="btn btn-sm btn-outline-danger">Clear Filters</a>
+        <div class="mb-3">
+          <label for="device_id" class="form-label">Device</label>
+          <select name="device_id" id="device_id" class="form-select">
+            <option value="">-- All Devices --</option>
+            {% for device in all_devices %}
+              <option value="{{ device.id }}" {% if filter_device == device.id %}selected{% endif %}>{{ device.hostname }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-outline-primary">Apply</button>
+          <a href="{{ url_for('notes.list_notes', clear=1) }}" class="btn btn-outline-danger">Clear</a>
+        </div>
+      </form>
     </div>
-  {% endif %}
 
-  {% if notes %}
-    <div class="list-group shadow-sm">
-      {% for note in notes %}
-        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap">
-          <div class="w-100">
-            <h5 class="mb-1">
-              <a href="{{ url_for('notes.view_note', filename=note.filename) }}">
-                {{ note.filename[:-3] }}
-              </a>
-            </h5>
+    <!-- Main Content -->
+    <div class="col-md-9">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Notes</h2>
+        <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Add Note</a>
+      </div>
 
-            <div class="mb-1">
+      {% if notes %}
+        {% for note in notes %}
+        <div class="card mb-3 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-1">
+                <a href="{{ url_for('notes.view_note', filename=note.filename) }}" class="text-decoration-none">
+                  {{ note.filename[:-3] }}
+                </a>
+              </h5>
+              <form method="POST" action="{{ url_for('notes.delete_note', filename=note.filename) }}"
+                    onsubmit="return confirm('Delete this note?');">
+                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+              </form>
+            </div>
+            <div class="mt-2">
               {% for tag in note.tags %}
                 <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge bg-secondary me-1">{{ tag }}</a>
               {% endfor %}
               {% for device_id in note.device_ids %}
                 {% set device = all_devices | selectattr("id", "equalto", device_id) | list | first %}
                 {% if device %}
-                  <a href="{{ url_for('notes.list_notes', device_id=device.id) }}" class="badge bg-dark me-1">
-                    {{ device.hostname }}
-                  </a>
+                  <a href="{{ url_for('notes.list_notes', device_id=device.id) }}" class="badge bg-dark me-1">{{ device.hostname }}</a>
                 {% endif %}
               {% endfor %}
             </div>
           </div>
-
-          <form method="POST" action="{{ url_for('notes.delete_note', filename=note.filename) }}"
-                onsubmit="return confirm('Are you sure you want to delete this note?');">
-            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-          </form>
         </div>
-      {% endfor %}
+        {% endfor %}
+      {% else %}
+        <div class="alert alert-warning">No notes found for the selected filter(s).</div>
+      {% endif %}
     </div>
-  {% else %}
-    <div class="alert alert-warning">No notes found.</div>
-  {% endif %}
+  </div>
 </div>
 {% endblock %}

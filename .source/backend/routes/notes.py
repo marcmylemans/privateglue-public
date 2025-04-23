@@ -8,6 +8,7 @@ from backend.utils.rbac import admin_required, editor_required, readonly_require
 
 notes_bp = Blueprint("notes", __name__, template_folder="../templates")
 NOTES_DIR = "/app/notes"
+META_FILE = os.path.join(NOTES_DIR, ".meta.json")
 
 # === Helpers ===
 def get_note_path(filename):
@@ -36,8 +37,17 @@ def save_metadata(filename, tags, device_ids):
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
-def list_all_notes():
-    return sorted([f for f in os.listdir(NOTES_DIR) if f.endswith(".md")])
+def load_all_notes():
+    notes = []
+    for filename in os.listdir(NOTES_DIR):
+        if filename.endswith(".md"):
+            meta = load_metadata(filename)
+            notes.append({
+                "filename": filename,
+                "tags": meta.get("tags", []),
+                "device_ids": meta.get("device_ids", [])
+            })
+    return notes
 
 def get_notes_linked_to_device(device_id):
     linked_notes = []
@@ -47,51 +57,55 @@ def get_notes_linked_to_device(device_id):
             with open(meta_path, "r", encoding="utf-8") as f:
                 meta = json.load(f)
                 device_ids = meta.get("device_ids", [])
-                # Ensure device ID match (cast to int for safety)
                 if int(device_id) in [int(d) for d in device_ids]:
                     note_name = filename.replace(".meta.json", "")
                     linked_notes.append(note_name)
     return linked_notes
 
-
 # === Routes ===
 @notes_bp.route("/notes")
 @login_required
-@readonly_required
 def list_notes():
-    if request.args.get("clear") == "1":
+    filter_tag = request.args.get("tag")
+    filter_device = request.args.get("device_id", type=int)
+    clear = request.args.get("clear")
+
+    if clear:
         session.pop("filter_tag", None)
         session.pop("filter_device", None)
         return redirect(url_for("notes.list_notes"))
 
-    filter_tag = request.args.get("tag") or session.get("filter_tag")
-    filter_device = request.args.get("device_id") or session.get("filter_device")
-
-    if request.args.get("tag"):
+    if filter_tag is not None:
         session["filter_tag"] = filter_tag
-    if request.args.get("device_id"):
+    else:
+        filter_tag = session.get("filter_tag")
+
+    if filter_device is not None:
         session["filter_device"] = filter_device
+    else:
+        filter_device = session.get("filter_device")
 
-    notes = []
-    for filename in list_all_notes():
-        note_id = filename[:-3]
-        meta = load_metadata(filename)
-        tags = meta["tags"]
-        device_ids = meta["device_ids"]
-
-        if filter_tag and filter_tag not in tags:
-            continue
-        if filter_device and str(filter_device) not in map(str, device_ids):
-            continue
-
-        notes.append({
-            "filename": filename,
-            "tags": tags,
-            "device_ids": device_ids
-        })
-
+    notes = load_all_notes()
     all_devices = Device.query.all()
-    return render_template("notes/index.html", notes=notes, filter_tag=filter_tag, filter_device=filter_device, all_devices=all_devices)
+
+    all_tags = set()
+    for note in notes:
+        all_tags.update(note["tags"])
+
+    # Apply filters (access dict keys properly)
+    if filter_tag:
+        notes = [n for n in notes if filter_tag in n["tags"]]
+    if filter_device:
+        notes = [n for n in notes if filter_device in n["device_ids"]]
+
+    return render_template(
+        "notes/index.html",
+        notes=notes,
+        all_devices=all_devices,
+        all_tags=sorted(all_tags),
+        filter_tag=filter_tag,
+        filter_device=filter_device
+    )
 
 @notes_bp.route("/notes/<filename>")
 @login_required

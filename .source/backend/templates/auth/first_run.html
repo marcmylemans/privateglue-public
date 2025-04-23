@@ -2,39 +2,54 @@
 {% block title %}Initial Setup - PrivateGlue{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-  <h2>Welcome to PrivateGlue!</h2>
-  <p class="lead">It looks like this is your first time setting up the app.</p>
+<div class="container-md mt-5" style="max-width: 600px;">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h2 class="mb-4 text-center">Welcome to PrivateGlue</h2>
+      <p class="text-muted text-center">
+        It looks like this is your first time setting up the app.
+      </p>
 
-  {% if zip_found %}
-    <div class="alert alert-info">
-      A backup archive was detected in the system. Would you like to restore it?
+      {% if zip_found %}
+        <div class="alert alert-info">
+          A backup archive was automatically detected. Would you like to restore it?
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.first_run') }}">
+          <div class="d-grid gap-2">
+            <button type="submit" name="action" value="restore" class="btn btn-primary">
+              Restore Detected Backup
+            </button>
+            <button type="submit" name="action" value="skip" class="btn btn-outline-secondary">
+              Skip and Register New User
+            </button>
+          </div>
+        </form>
+
+        <hr class="my-4">
+      {% endif %}
+
+      <h5 class="text-center mb-3">Restore from a backup file:</h5>
+      <form method="POST" action="{{ url_for('auth.first_run') }}" enctype="multipart/form-data">
+        <div class="mb-3">
+          <input type="file" name="backup_file" class="form-control" accept=".zip" required>
+        </div>
+        <div class="d-grid">
+          <button type="submit" name="action" value="upload_restore" class="btn btn-outline-primary">
+            Upload and Restore
+          </button>
+        </div>
+      </form>
+
+      {% if not zip_found %}
+        <hr class="my-4">
+        <div class="d-grid">
+          <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">
+            Skip and Register New User
+          </a>
+        </div>
+      {% endif %}
     </div>
-
-    <!-- Restore detected file -->
-    <form method="POST" action="{{ url_for('auth.first_run') }}">
-      <input type="hidden" name="action" value="restore">
-      <button type="submit" class="btn btn-primary me-2">Restore Detected Backup</button>
-    </form>
-    <hr>
-  {% endif %}
-
-  <!-- Upload backup file manually -->
-  <form method="POST" action="{{ url_for('auth.first_run') }}" enctype="multipart/form-data" class="mb-3">
-    <div class="mb-3">
-      <label for="backup_file" class="form-label">Upload a Backup ZIP</label>
-      <input type="file" class="form-control" name="backup_file" id="backup_file" accept=".zip">
-    </div>
-    <input type="hidden" name="action" value="upload_restore">
-    <button type="submit" class="btn btn-outline-secondary">Upload & Restore Backup</button>
-  </form>
-
-  <hr>
-
-  <!-- Skip and register -->
-  <form method="POST" action="{{ url_for('auth.first_run') }}">
-    <input type="hidden" name="action" value="skip">
-    <button type="submit" class="btn btn-success">Skip and Register New User</button>
-  </form>
+  </div>
 </div>
 {% endblock %}

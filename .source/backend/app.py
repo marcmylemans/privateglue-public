@@ -55,6 +55,16 @@ def inject_user_role():
     from flask_login import current_user
     return dict(user_role=getattr(current_user, 'role', None))
 
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template("errors/404.html"), 404
+
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template("errors/403.html"), 403
+
+
 @app.route("/")
 @login_required
 def index():

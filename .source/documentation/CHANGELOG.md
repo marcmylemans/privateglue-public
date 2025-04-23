@@ -4,6 +4,27 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## [0.6.5] - 2025-04-23
+### Added
+- Custom 404 and 403 error pages with clean layout
+- Placeholder view for `/search` ("Coming soon")
+
+### Improved
+- UI/UX overhaul across the app to match GitHub’s aesthetic
+  - Updated layout and spacing in devices, credentials, and notes views
+  - Redesigned dashboard card layout
+  - First-run setup and registration pages made more user-friendly
+- Dark mode markdown preview in note editor
+- Registration form now includes:
+  - Live username availability check
+  - Color-coded password strength feedback
+
+### Fixed
+- Form layout and spacing consistency
+- Flash messages and live previews working across light/dark themes
+
+---
+
 ## [v0.6.4] - 2025-04-23
 
 ### Added

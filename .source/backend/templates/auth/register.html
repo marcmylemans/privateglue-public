@@ -2,37 +2,48 @@
 {% block title %}Register - PrivateGlue{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Register</h2>
-  <form method="POST">
-    {{ form.hidden_tag() }}
+<div class="container-md mt-5" style="max-width: 600px;">
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <h2 class="mb-4 text-center">Create Your Account</h2>
+      <form method="POST">
+        {{ form.hidden_tag() }}
 
-    <div class="mb-3">
-      {{ form.username.label(class="form-label") }}
-      {{ form.username(class="form-control", id="username", placeholder="Choose a username") }}
+        <!-- Username -->
+        <div class="mb-3">
+          {{ form.username.label(class="form-label") }}
+          {{ form.username(class="form-control", id="username", placeholder="Choose a username") }}
+          <div id="usernameFeedback" class="form-text mt-1"></div>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-3">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control", id="password", placeholder="Create a password") }}
+          <div id="passwordFeedback" class="form-text mt-1">Password must be at least 8 characters.</div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="mb-4">
+          {{ form.confirm_password.label(class="form-label") }}
+          {{ form.confirm_password(class="form-control", id="confirm_password", placeholder="Confirm password") }}
+          <div id="confirmFeedback" class="form-text mt-1"></div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-grid mb-3">
+          {{ form.submit(class="btn btn-primary") }}
+        </div>
+
+        <div class="text-center">
+          <a href="{{ url_for('auth.login') }}" class="link-secondary">Already have an account?</a>
+        </div>
+      </form>
     </div>
-    <div id="usernameFeedback" class="form-text mt-1"></div>
-
-
-    <div class="mb-3">
-      {{ form.password.label(class="form-label") }}
-      {{ form.password(class="form-control", id="password", placeholder="Create a password") }}
-      <div id="passwordFeedback" class="form-text mt-1">Password must be at least 8 characters.</div>
-    </div>
-
-    <div class="mb-3">
-      {{ form.confirm_password.label(class="form-label") }}
-      {{ form.confirm_password(class="form-control", id="confirm_password", placeholder="Confirm password") }}
-      <div id="confirmFeedback" class="form-text mt-1"></div>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center">
-      {{ form.submit(class="btn btn-primary") }}
-      <a href="{{ url_for('auth.login') }}" class="btn btn-link">Already have an account?</a>
-    </div>
-  </form>
+  </div>
 </div>
 
+<!-- Scripts -->
 <script>
   const username = document.getElementById("username");
   const usernameFeedback = document.getElementById("usernameFeedback");
@@ -41,8 +52,8 @@
 
   username.addEventListener("input", () => {
     clearTimeout(usernameTimeout);
-
     const value = username.value.trim();
+
     if (value.length === 0) {
       username.classList.remove("is-valid", "is-invalid");
       usernameFeedback.textContent = "";
@@ -51,7 +62,7 @@
 
     usernameTimeout = setTimeout(() => {
       fetch(`/check_username?username=${encodeURIComponent(value)}`)
-        .then(response => response.json())
+        .then(res => res.json())
         .then(data => {
           username.classList.remove("is-valid", "is-invalid");
           usernameFeedback.classList.remove("text-success", "text-danger");
@@ -59,16 +70,16 @@
           if (data.exists) {
             username.classList.add("is-invalid");
             usernameFeedback.classList.add("text-danger");
-            usernameFeedback.textContent = "Username is already taken ❌";
+            usernameFeedback.textContent = "Username is already taken";
           } else {
             username.classList.add("is-valid");
             usernameFeedback.classList.add("text-success");
-            usernameFeedback.textContent = "Username is available ✅";
+            usernameFeedback.textContent = "Username is available";
           }
         });
-    }, 300); // slight delay to reduce requests
+    }, 300);
   });
-  
+
   const password = document.getElementById("password");
   const confirm = document.getElementById("confirm_password");
   const passwordFeedback = document.getElementById("passwordFeedback");
@@ -76,7 +87,6 @@
 
   function updatePasswordStrength() {
     const len = password.value.length;
-
     password.classList.remove("is-invalid", "is-warning", "is-valid");
     passwordFeedback.classList.remove("text-danger", "text-warning", "text-success");
 
@@ -96,7 +106,7 @@
     } else {
       password.classList.add("is-valid");
       passwordFeedback.classList.add("text-success");
-      passwordFeedback.textContent = "Strong password ✅";
+      passwordFeedback.textContent = "Strong password";
     }
   }
 
@@ -115,7 +125,7 @@
       confirm.classList.add("is-valid");
       confirmFeedback.classList.remove("text-danger");
       confirmFeedback.classList.add("text-success");
-      confirmFeedback.textContent = "Passwords match ✅";
+      confirmFeedback.textContent = "Passwords match";
     }
   }
 

@@ -2,85 +2,87 @@
 {% block title %}Devices - PrivateGlue{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container-fluid mt-4">
+
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Devices</h2>
-    <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary">Add Device</a>
+    <h2 class="mb-0">Devices <small class="text-muted fs-6">({{ devices|length }})</small></h2>
+    <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary mb-3">Add Device</a>
   </div>
 
-  <!-- Filter Form -->
-  <form method="GET" action="{{ url_for('devices.list_devices') }}" class="row g-3 mb-4">
+  <!-- Filter Bar -->
+  <form method="GET" action="{{ url_for('devices.list_devices') }}" class="row g-2 align-items-end mb-3">
     <div class="col-md-3">
-      <label for="type" class="form-label">Filter by Type</label>
-      <select name="type" id="type" class="form-select">
-        <option value="">-- All Types --</option>
+      <label for="type" class="form-label mb-0">Type</label>
+      <select name="type" id="type" class="form-select form-select-sm">
+        <option value="">All Types</option>
         {% for type in all_types %}
           <option value="{{ type }}" {% if filter_type == type %}selected{% endif %}>{{ type }}</option>
         {% endfor %}
       </select>
     </div>
-
     <div class="col-md-3">
-      <label for="location" class="form-label">Filter by Location</label>
-      <select name="location" id="location" class="form-select">
-        <option value="">-- All Locations --</option>
+      <label for="location" class="form-label mb-0">Location</label>
+      <select name="location" id="location" class="form-select form-select-sm">
+        <option value="">All Locations</option>
         {% for location in all_locations %}
           <option value="{{ location }}" {% if filter_location == location %}selected{% endif %}>{{ location }}</option>
         {% endfor %}
       </select>
     </div>
-
-    <div class="col-md-6 d-flex align-items-end">
-      <button type="submit" class="btn btn-outline-primary me-2">Apply Filters</button>
-      <a href="{{ url_for('devices.list_devices', clear=1) }}" class="btn btn-outline-danger">Clear Filters</a>
+    <div class="col-md-auto">
+      <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+      <a href="{{ url_for('devices.list_devices', clear=1) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
     </div>
   </form>
 
+  <!-- Active Filter Badges -->
   {% if filter_type or filter_location %}
     <div class="mb-3">
       {% if filter_type %}
-        <span class="badge bg-info text-dark me-2">
+        <span class="badge rounded-pill text-bg-light border me-2">
           Type: {{ filter_type }}
         </span>
       {% endif %}
       {% if filter_location %}
-        <span class="badge bg-info text-dark me-2">
+        <span class="badge rounded-pill text-bg-light border me-2">
           Location: {{ filter_location }}
         </span>
       {% endif %}
     </div>
   {% endif %}
 
-  <!-- Devices Table -->
-  <table class="table table-striped mt-3">
-    <thead>
-      <tr>
-        <th>Hostname</th>
-        <th>IP Address</th>
-        <th>Type</th>
-        <th>Location</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for device in devices %}
-      <tr>
-        <td>{{ device.hostname }}</td>
-        <td>{{ device.ip_address }}</td>
-        <td>{{ device.device_type }}</td>
-        <td>{{ device.location }}</td>
-        <td>
-          <a href="{{ url_for('devices.view_device', id=device.id) }}" class="btn btn-sm btn-outline-info me-1">View</a>
-          <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-sm btn-outline-secondary me-1">Edit</a>
-          <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-sm btn-outline-dark">Clone</a>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="5" class="text-center text-muted">No devices found.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <!-- Device Table -->
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Hostname</th>
+          <th scope="col">IP</th>
+          <th scope="col">Type</th>
+          <th scope="col">Location</th>
+          <th scope="col" class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for device in devices %}
+          <tr>
+            <td>{{ device.hostname }}</td>
+            <td>{{ device.ip_address }}</td>
+            <td>{{ device.device_type }}</td>
+            <td>{{ device.location }}</td>
+            <td class="text-end">
+              <a href="{{ url_for('devices.view_device', id=device.id) }}" class="btn btn-sm btn-outline-info" title="View">View</a>
+              <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit">Edit</a>
+              <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-sm btn-outline-dark" title="Clone">Clone</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">No devices found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% endblock %}

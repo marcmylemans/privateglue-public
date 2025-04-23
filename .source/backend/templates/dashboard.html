@@ -1,99 +1,96 @@
 {% extends 'base.html' %}
 {% block title %}Dashboard - PrivateGlue{% endblock %}
+
 {% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Dashboard</h2>
 
-<h2>Dashboard</h2>
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Devices</h5>
+          <p class="text-muted">{{ device_count }} total</p>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('devices.add_device') }}" class="btn btn-sm btn-primary">Add Device</a>
+            <a href="{{ url_for('devices.list_devices') }}" class="btn btn-sm btn-outline-secondary">View Devices</a>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<div class="row">
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h5 class="card-title">Devices</h5>
-        <p class="card-text">{{ device_count }} total</p>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary">Add Device</a>
-          <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary btn-sm">View Devices</a>
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Notes</h5>
+          <p class="text-muted">{{ note_count }} total</p>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('notes.create_note') }}" class="btn btn-sm btn-primary">Add Note</a>
+            <a href="{{ url_for('notes.list_notes') }}" class="btn btn-sm btn-outline-secondary">View Notes</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Credentials</h5>
+          <p class="text-muted">{{ credential_count }} total</p>
+          <div class="d-grid gap-2">
+            <a href="{{ url_for('credentials.add_credential') }}" class="btn btn-sm btn-primary">Add Credential</a>
+            <a href="{{ url_for('credentials.list_credentials') }}" class="btn btn-sm btn-outline-secondary">View Credentials</a>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h5 class="card-title">Notes</h5>
-        <p class="card-text">{{ note_count }} total</p>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Add Note</a>
-          <a href="{{ url_for('notes.list_notes') }}" class="btn btn-secondary btn-sm">View Notes</a>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% if recent_credentials %}
+    <hr>
+    <h5 class="mt-4">Recent Credentials</h5>
+    <ul class="list-group list-group-flush mb-4">
+      {% for cred in recent_credentials %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('credentials.view_credential', id=cred.id) }}">{{ cred.title }}</a>
+          {% if cred.devices %}
+            <small class="text-muted">
+              {% for device in cred.devices %}
+                {{ device.hostname }}{% if not loop.last %}, {% endif %}
+              {% endfor %}
+            </small>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h5 class="card-title">Credentials</h5>
-        <p class="card-text">{{ credential_count }} total</p>
-        <div class="d-flex gap-2">
-          <a href="{{ url_for('credentials.add_credential') }}" class="btn btn-primary">Add Credential</a>
-          <a href="{{ url_for('credentials.list_credentials') }}" class="btn btn-secondary btn-sm">View Credentials</a>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% if recent_devices %}
+    <hr>
+    <h5>Recent Devices</h5>
+    <ul class="list-group list-group-flush mb-4">
+      {% for dev in recent_devices %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('devices.view_device', id=dev.id) }}">{{ dev.hostname }}</a>
+          <small class="text-muted">{{ dev.device_type or 'No type' }}</small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if recent_notes %}
+    <hr>
+    <h5>Recently Linked Notes</h5>
+    <ul class="list-group list-group-flush">
+      {% for note in recent_notes %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('notes.view_note', filename=note.filename) }}">{{ note.filename[:-3] }}</a>
+          {% if note.device %}
+            <small class="text-muted">↳ {{ note.device.hostname }}</small>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
 </div>
-
-
-
-{% if recent_credentials %}
-<hr>
-<h4>Recent Credentials</h4>
-<ul class="list-group mb-4">
-  {% for cred in recent_credentials %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      <a href="{{ url_for('credentials.view_credential', id=cred.id) }}">{{ cred.title }}</a>
-      {% if cred.devices %}
-        <small>
-          ↳
-          {% for device in cred.devices %}
-            {{ device.hostname }}{% if not loop.last %}, {% endif %}
-          {% endfor %}
-        </small>
-      {% endif %}
-    </li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-{% if recent_devices %}
-<hr>
-<h4>Recent Devices</h4>
-<ul class="list-group mb-4">
-  {% for dev in recent_devices %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      <a href="{{ url_for('devices.view_device', id=dev.id) }}">{{ dev.hostname }}</a>
-      <small>{{ dev.device_type or 'No type' }}</small>
-    </li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-{% if recent_notes %}
-<hr>
-<h4>Recently Linked Notes</h4>
-<ul class="list-group">
-  {% for note in recent_notes %}
-    <li class="list-group-item d-flex justify-content-between align-items-center">
-      <a href="{{ url_for('notes.view_note', filename=note.filename) }}">{{ note.filename }}</a>
-      {% if note.device %}
-        <small>↳ {{ note.device.hostname }}</small>
-      {% endif %}
-    </li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-
 {% endblock %}

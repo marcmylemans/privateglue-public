@@ -13,7 +13,7 @@
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ url_for('index') }}">PrivateGlue</a>
+      <a class="navbar-brand fw-semibold" href="{{ url_for('index') }}">PrivateGlue</a>
 
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
@@ -31,12 +31,12 @@
             <a class="nav-link" href="{{ url_for('credentials.list_credentials') }}">Credentials</a>
           </li>
         </ul>
-        
 
-        <form class="d-flex me-3" method="GET" action="#">
-          <input class="form-control me-2" type="search" placeholder="Search..." disabled>
-          <button class="btn btn-outline-primary" type="submit" disabled>Search</button>
+        <form class="d-flex me-3" onsubmit="showSearchAlert(); return false;">
+          <input class="form-control me-2" type="search" placeholder="Search (coming soon!)" id="searchInput">
+          <button class="btn btn-outline-primary" type="submit">Search</button>
         </form>
+        
 
         {% if current_user.is_authenticated %}
         <div class="dropdown">
@@ -61,7 +61,7 @@
   </nav>
 
   <!-- Page Content -->
-  <div class="container mt-4">
+  <main class="container py-4">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
@@ -74,7 +74,7 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
-  </div>
+  </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
@@ -96,6 +96,14 @@
         });
       }
     });
+  </script>
+  <script>
+    function showSearchAlert() {
+      const term = document.getElementById("searchInput").value;
+      if (term.trim() !== "") {
+        alert("Search is coming soon! You searched for: " + term);
+      }
+    }
   </script>
 </body>
 </html>

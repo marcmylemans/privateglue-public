@@ -3,35 +3,44 @@
 
 {% block content %}
 <div class="container mt-4">
+
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">{{ filename[:-3] }}</h2>
     <div>
+      {# Optional: Check if current_user can edit in the future #}
       <a href="{{ url_for('notes.edit_note', filename=filename) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
       <a href="{{ url_for('notes.list_notes') }}" class="btn btn-sm btn-outline-secondary">Back to Notes</a>
     </div>
   </div>
 
+  <!-- Tags -->
   {% if tags %}
-    <div class="mb-2">
-      {% for tag in tags %}
-        <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge bg-secondary me-1">{{ tag }}</a>
-      {% endfor %}
-    </div>
+  <div class="mb-2">
+    {% for tag in tags %}
+      <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge rounded-pill text-bg-light border me-1">
+        #{{ tag }}
+      </a>
+    {% endfor %}
+  </div>
   {% endif %}
 
+  <!-- Linked Devices -->
   {% if devices %}
-    <div class="mb-4">
-      <strong>Linked Devices:</strong><br>
-      {% for device in devices %}
-        <a href="{{ url_for('devices.view_device', id=device.id) }}" class="badge bg-dark me-1">
-          {{ device.hostname }}
-        </a>
-      {% endfor %}
-    </div>
+  <div class="mb-4">
+    <div class="small text-muted mb-1">Linked Devices:</div>
+    {% for device in devices %}
+      <a href="{{ url_for('devices.view_device', id=device.id) }}" class="badge text-bg-dark me-1">
+        {{ device.hostname }}
+      </a>
+    {% endfor %}
+  </div>
   {% endif %}
 
+  <!-- Markdown Content -->
   <div class="border rounded p-4 bg-body-tertiary markdown-body" style="min-height: 300px;">
     {{ content | safe }}
   </div>
+
 </div>
 {% endblock %}
