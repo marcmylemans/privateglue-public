@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Register - PrivateGlue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Register</h2>
+  <form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+      {{ form.username.label(class="form-label") }}
+      {{ form.username(class="form-control", id="username", placeholder="Choose a username") }}
+    </div>
+    <div id="usernameFeedback" class="form-text mt-1"></div>
+
+
+    <div class="mb-3">
+      {{ form.password.label(class="form-label") }}
+      {{ form.password(class="form-control", id="password", placeholder="Create a password") }}
+      <div id="passwordFeedback" class="form-text mt-1">Password must be at least 8 characters.</div>
+    </div>
+
+    <div class="mb-3">
+      {{ form.confirm_password.label(class="form-label") }}
+      {{ form.confirm_password(class="form-control", id="confirm_password", placeholder="Confirm password") }}
+      <div id="confirmFeedback" class="form-text mt-1"></div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+      {{ form.submit(class="btn btn-primary") }}
+      <a href="{{ url_for('auth.login') }}" class="btn btn-link">Already have an account?</a>
+    </div>
+  </form>
+</div>
+
+<script>
+  const username = document.getElementById("username");
+  const usernameFeedback = document.getElementById("usernameFeedback");
+
+  let usernameTimeout = null;
+
+  username.addEventListener("input", () => {
+    clearTimeout(usernameTimeout);
+
+    const value = username.value.trim();
+    if (value.length === 0) {
+      username.classList.remove("is-valid", "is-invalid");
+      usernameFeedback.textContent = "";
+      return;
+    }
+
+    usernameTimeout = setTimeout(() => {
+      fetch(`/check_username?username=${encodeURIComponent(value)}`)
+        .then(response => response.json())
+        .then(data => {
+          username.classList.remove("is-valid", "is-invalid");
+          usernameFeedback.classList.remove("text-success", "text-danger");
+
+          if (data.exists) {
+            username.classList.add("is-invalid");
+            usernameFeedback.classList.add("text-danger");
+            usernameFeedback.textContent = "Username is already taken ❌";
+          } else {
+            username.classList.add("is-valid");
+            usernameFeedback.classList.add("text-success");
+            usernameFeedback.textContent = "Username is available ✅";
+          }
+        });
+    }, 300); // slight delay to reduce requests
+  });
+  
+  const password = document.getElementById("password");
+  const confirm = document.getElementById("confirm_password");
+  const passwordFeedback = document.getElementById("passwordFeedback");
+  const confirmFeedback = document.getElementById("confirmFeedback");
+
+  function updatePasswordStrength() {
+    const len = password.value.length;
+
+    password.classList.remove("is-invalid", "is-warning", "is-valid");
+    passwordFeedback.classList.remove("text-danger", "text-warning", "text-success");
+
+    if (len === 0) {
+      passwordFeedback.textContent = "Password must be at least 8 characters.";
+      return;
+    }
+
+    if (len < 8) {
+      password.classList.add("is-invalid");
+      passwordFeedback.classList.add("text-danger");
+      passwordFeedback.textContent = "Too short — must be at least 8 characters.";
+    } else if (len === 8 || len === 9) {
+      password.classList.add("is-warning");
+      passwordFeedback.classList.add("text-warning");
+      passwordFeedback.textContent = "Okay, but longer is better.";
+    } else {
+      password.classList.add("is-valid");
+      passwordFeedback.classList.add("text-success");
+      passwordFeedback.textContent = "Strong password ✅";
+    }
+  }
+
+  function updatePasswordMatch() {
+    if (confirm.value === "") {
+      confirmFeedback.textContent = "";
+      return;
+    }
+
+    if (confirm.value !== password.value) {
+      confirm.classList.add("is-invalid");
+      confirmFeedback.classList.add("text-danger");
+      confirmFeedback.textContent = "Passwords do not match.";
+    } else {
+      confirm.classList.remove("is-invalid");
+      confirm.classList.add("is-valid");
+      confirmFeedback.classList.remove("text-danger");
+      confirmFeedback.classList.add("text-success");
+      confirmFeedback.textContent = "Passwords match ✅";
+    }
+  }
+
+  password.addEventListener("input", () => {
+    updatePasswordStrength();
+    updatePasswordMatch();
+  });
+
+  confirm.addEventListener("input", updatePasswordMatch);
+</script>
+{% endblock %}

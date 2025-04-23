@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}PrivateGlue{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for('index') }}">PrivateGlue</a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('devices.list_devices') }}">Devices</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('notes.list_notes') }}">Notes</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('credentials.list_credentials') }}">Credentials</a>
+          </li>
+        </ul>
+        
+
+        <form class="d-flex me-3" method="GET" action="#">
+          <input class="form-control me-2" type="search" placeholder="Search..." disabled>
+          <button class="btn btn-outline-primary" type="submit" disabled>Search</button>
+        </form>
+
+        {% if current_user.is_authenticated %}
+        <div class="dropdown">
+          <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            Welcome, {{ current_user.username or current_user.id }}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% if current_user.role == "admin" %}
+              <li><a class="dropdown-item" href="{{ url_for('admin.create_backup') }}">Create Backup</a></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="#">Profile (coming soon)</a></li>
+            <li><a class="dropdown-item" href="#" id="toggle-theme">Toggle Light/Dark</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a></li>
+          </ul>
+        </div>
+        {% else %}
+        <a class="btn btn-outline-primary" href="{{ url_for('auth.login') }}">Login</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page Content -->
+  <div class="container mt-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message | safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const userPref = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const html = document.documentElement;
+
+    html.setAttribute('data-bs-theme', userPref || (prefersDark ? 'dark' : 'light'));
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const toggle = document.getElementById("toggle-theme");
+      if (toggle) {
+        toggle.addEventListener("click", function (e) {
+          e.preventDefault();
+          const current = html.getAttribute('data-bs-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          html.setAttribute('data-bs-theme', next);
+          localStorage.setItem('theme', next);
+        });
+      }
+    });
+  </script>
+</body>
+</html>

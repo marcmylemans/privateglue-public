@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}
+  {% if clone %}
+    Clone Device - PrivateGlue
+  {% elif device %}
+    Edit Device - PrivateGlue
+  {% else %}
+    Add Device - PrivateGlue
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">
+    {% if clone %}
+      Clone Device: {{ device.hostname }}
+    {% elif device %}
+      Edit Device
+    {% else %}
+      Add Device
+    {% endif %}
+  </h2>
+
+  <form method="POST" action="{% if clone %}{{ url_for('devices.add_device') }}{% elif device %}{{ url_for('devices.edit_device', id=device.id) }}{% else %}{{ url_for('devices.add_device') }}{% endif %}">
+    <div class="mb-3">
+      <label class="form-label">Hostname</label>
+      <input type="text" class="form-control" name="hostname" value="{{ device.hostname if device else '' }}" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">IP Address</label>
+      <input type="text" class="form-control" name="ip_address" value="{{ device.ip_address if device else '' }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Device Type</label>
+      <input type="text" class="form-control" name="device_type" value="{{ device.device_type if device else '' }}">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Location</label>
+      <input type="text" class="form-control" name="location" value="{{ device.location if device else '' }}">
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary">Cancel</a>
+  </form>
+
+  {% if device and not clone and related_notes %}
+    <hr>
+    <h4>Linked Notes</h4>
+    {% if related_notes %}
+      <ul class="list-group mt-2">
+        {% for note in related_notes %}
+          <li class="list-group-item">
+            <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note[:-3] }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="alert alert-light mt-2">No linked notes.</div>
+    {% endif %}
+  {% endif %}
+
+  {% if device and not clone %}
+    <a class="btn btn-outline-primary mt-3" href="{{ url_for('devices.clone_device', id=device.id) }}">Clone Device</a>
+  {% endif %}
+</div>
+{% endblock %}

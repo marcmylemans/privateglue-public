@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Initial Setup - PrivateGlue{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2>Welcome to PrivateGlue!</h2>
+  <p class="lead">It looks like this is your first time setting up the app.</p>
+
+  {% if zip_found %}
+    <div class="alert alert-info">
+      A backup archive was detected in the system. Would you like to restore it?
+    </div>
+
+    <!-- Restore detected file -->
+    <form method="POST" action="{{ url_for('auth.first_run') }}">
+      <input type="hidden" name="action" value="restore">
+      <button type="submit" class="btn btn-primary me-2">Restore Detected Backup</button>
+    </form>
+    <hr>
+  {% endif %}
+
+  <!-- Upload backup file manually -->
+  <form method="POST" action="{{ url_for('auth.first_run') }}" enctype="multipart/form-data" class="mb-3">
+    <div class="mb-3">
+      <label for="backup_file" class="form-label">Upload a Backup ZIP</label>
+      <input type="file" class="form-control" name="backup_file" id="backup_file" accept=".zip">
+    </div>
+    <input type="hidden" name="action" value="upload_restore">
+    <button type="submit" class="btn btn-outline-secondary">Upload & Restore Backup</button>
+  </form>
+
+  <hr>
+
+  <!-- Skip and register -->
+  <form method="POST" action="{{ url_for('auth.first_run') }}">
+    <input type="hidden" name="action" value="skip">
+    <button type="submit" class="btn btn-success">Skip and Register New User</button>
+  </form>
+</div>
+{% endblock %}

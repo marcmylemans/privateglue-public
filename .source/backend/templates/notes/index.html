@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Notes{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Notes</h2>
+    <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Add Note</a>
+  </div>
+
+  {% if filter_tag or filter_device %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+      <div>
+        {% if filter_tag %}
+          <span class="badge bg-info me-2">Tag: {{ filter_tag }}</span>
+        {% endif %}
+        {% if filter_device %}
+          <span class="badge bg-info">Device: 
+            {{ all_devices | selectattr("id", "equalto", filter_device | int) | map(attribute="hostname") | list | first }}
+          </span>
+        {% endif %}
+      </div>
+      <a href="{{ url_for('notes.list_notes', clear=1) }}" class="btn btn-sm btn-outline-danger">Clear Filters</a>
+    </div>
+  {% endif %}
+
+  {% if notes %}
+    <div class="list-group shadow-sm">
+      {% for note in notes %}
+        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center flex-wrap">
+          <div class="w-100">
+            <h5 class="mb-1">
+              <a href="{{ url_for('notes.view_note', filename=note.filename) }}">
+                {{ note.filename[:-3] }}
+              </a>
+            </h5>
+
+            <div class="mb-1">
+              {% for tag in note.tags %}
+                <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge bg-secondary me-1">{{ tag }}</a>
+              {% endfor %}
+              {% for device_id in note.device_ids %}
+                {% set device = all_devices | selectattr("id", "equalto", device_id) | list | first %}
+                {% if device %}
+                  <a href="{{ url_for('notes.list_notes', device_id=device.id) }}" class="badge bg-dark me-1">
+                    {{ device.hostname }}
+                  </a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+
+          <form method="POST" action="{{ url_for('notes.delete_note', filename=note.filename) }}"
+                onsubmit="return confirm('Are you sure you want to delete this note?');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-warning">No notes found.</div>
+  {% endif %}
+</div>
+{% endblock %}

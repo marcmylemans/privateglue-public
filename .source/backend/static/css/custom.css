@@ -1,0 +1,80 @@
+/* Ensure body text adapts to theme */
+body {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+/* Markdown styling */
+.markdown-body {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5 {
+  color: var(--bs-emphasis-color, var(--bs-body-color));
+}
+
+/* Anchor links inside markdown */
+.markdown-body a {
+  color: var(--bs-link-color);
+  text-decoration: underline;
+}
+.markdown-body a:hover {
+  color: var(--bs-link-hover-color);
+}
+
+/* Fix flash alert visibility in dark mode */
+.alert {
+  color: var(--bs-body-color);
+  background-color: var(--bs-tertiary-bg);
+  border-color: var(--bs-border-color);
+}
+
+/* Improve tag/device badges in dark mode */
+.badge.bg-dark {
+  background-color: var(--bs-dark-bg-subtle, #444) !important;
+  color: var(--bs-light-text-emphasis, #fff) !important;
+}
+.badge.bg-secondary {
+  background-color: var(--bs-secondary-bg-subtle, #6c757d) !important;
+  color: var(--bs-light-text-emphasis, #fff) !important;
+}
+
+/* Ensure buttons are legible on dark background */
+.btn-outline-dark {
+  color: var(--bs-body-color);
+  border-color: var(--bs-border-color);
+}
+.btn-outline-dark:hover {
+  background-color: var(--bs-dark);
+  color: #fff;
+}
+
+/* Navbar dropdown text fix for dark mode */
+.dropdown-menu {
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+.dropdown-item {
+  color: var(--bs-body-color);
+}
+.dropdown-item:hover {
+  background-color: var(--bs-secondary-bg);
+}
+
+/* Light/dark toggle styles */
+.theme-toggle {
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: var(--bs-body-color);
+}
+
+.theme-toggle:hover {
+  color: var(--bs-primary);
+}

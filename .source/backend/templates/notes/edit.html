@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ "Create Note" if create_mode else "Edit Note" }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ "Create a New Note" if create_mode else "Edit Note" }}</h2>
+  <form method="post">
+    <div class="row mt-3">
+      <div class="col-md-6">
+        {% if create_mode %}
+        <div class="mb-3">
+          <label for="filename" class="form-label">Filename</label>
+          <input type="text" class="form-control" name="filename" id="filename" placeholder="example-note">
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label for="tags" class="form-label">Tags (comma-separated)</label>
+          <input type="text" class="form-control" name="tags" id="tags" value="{{ tags }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Linked Devices</label>
+          <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+            {% for device in all_devices %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="devices" value="{{ device.id }}"
+                  id="device-{{ device.id }}"
+                  {% if device.id in linked_device_ids %}checked{% endif %}>
+                <label class="form-check-label" for="device-{{ device.id }}">
+                  {{ device.hostname }} ({{ device.ip_address }})
+                </label>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <label for="content" class="form-label">Markdown Content</label>
+        <textarea class="form-control" name="content" id="content" rows="15" oninput="updatePreview()">{{ content }}</textarea>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="form-label">Live Preview</label>
+      <div id="preview" class="border rounded p-3 bg-light markdown-body" style="min-height: 200px;"></div>
+    </div>
+
+    <div class="mt-4">
+      <button type="submit" class="btn btn-success">{{ "Create Note" if create_mode else "Save Changes" }}</button>
+      <a href="{{ url_for('notes.list_notes') }}" class="btn btn-secondary">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+  function updatePreview() {
+    const raw = document.getElementById("content").value;
+    document.getElementById("preview").innerHTML = marked.parse(raw);
+  }
+
+  document.addEventListener("DOMContentLoaded", updatePreview);
+</script>
+{% endblock %}

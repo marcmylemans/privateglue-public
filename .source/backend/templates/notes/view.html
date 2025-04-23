@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ filename[:-3] }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">{{ filename[:-3] }}</h2>
+    <div>
+      <a href="{{ url_for('notes.edit_note', filename=filename) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
+      <a href="{{ url_for('notes.list_notes') }}" class="btn btn-sm btn-outline-secondary">Back to Notes</a>
+    </div>
+  </div>
+
+  {% if tags %}
+    <div class="mb-2">
+      {% for tag in tags %}
+        <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge bg-secondary me-1">{{ tag }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if devices %}
+    <div class="mb-4">
+      <strong>Linked Devices:</strong><br>
+      {% for device in devices %}
+        <a href="{{ url_for('devices.view_device', id=device.id) }}" class="badge bg-dark me-1">
+          {{ device.hostname }}
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="border rounded p-4 bg-body-tertiary markdown-body" style="min-height: 300px;">
+    {{ content | safe }}
+  </div>
+</div>
+{% endblock %}

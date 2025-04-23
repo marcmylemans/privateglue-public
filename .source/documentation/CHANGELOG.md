@@ -4,6 +4,34 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## [v0.6.4] - 2025-04-23
+
+### Added
+  - Role-Based Access Control (RBAC):
+  - `admin_required`, `editor_required`, and `readonly_required` decorators.
+  - Credential create/edit/delete requires editor rights.
+  - Admin panel (backup/restore) restricted to admins only.
+
+- Session Expiration Handling:
+  - Sessions now expire unless "Remember Me" is checked during login.
+  - Default expiration is set to 1 hour (`app.permanent_session_lifetime`).
+  - Graceful fallback for non-persistent sessions on restart or logout.
+
+### Changed
+  - Centralized SQLAlchemy `db` import across route modules using:
+  `from backend.models.devices import db`
+
+### Removed / Postponed
+  - Macro-based role button visibility was removed due to template context issues (`current_user` undefined).
+  - Logged for future UI/UX sprint.
+
+### Verified
+- All core RBAC protections tested with all roles.
+- Admin-only backup and restore functionality revalidated.
+- Session logic functions correctly with or without persistent login.
+
+---
+
 ## [0.6.3] - 2025-04-22
 
 ### 🚀 Added
