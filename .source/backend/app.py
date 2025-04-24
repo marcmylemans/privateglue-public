@@ -11,6 +11,7 @@ from backend.routes.notes import notes_bp
 from backend.routes.auth import auth_bp
 from backend.routes.admin import admin_bp
 from backend.routes.credentials import credentials_bp
+from backend.utils.setup_users import initialize_default_users
 
 # Ensure SQLite path is available
 os.makedirs("/app/data", exist_ok=True)
@@ -18,7 +19,8 @@ os.makedirs("/app/data", exist_ok=True)
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////app/data/app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["DEMO_MODE"] = os.getenv("DEMO_MODE", "false").lower() == "true"
+app.config["DEMO_MODE"] = os.environ.get("DEMO_MODE", "false").lower() == "true"
+print(f"DEMO_MODE is set to: {app.config['DEMO_MODE']}")
 app.secret_key = os.environ.get("SECRET_KEY", "changeme")
 app.permanent_session_lifetime = timedelta(hours=1)
 
@@ -51,9 +53,14 @@ app.register_blueprint(admin_bp)
 NOTES_DIR = "/app/notes"
 
 @app.context_processor
-def inject_user_role():
+def inject_globals():
+    from flask import current_app
     from flask_login import current_user
-    return dict(user_role=getattr(current_user, 'role', None))
+    return {
+        "DEMO_MODE": current_app.config.get("DEMO_MODE", False),
+        "user_role": getattr(current_user, "role", None)
+    }
+
 
 
 @app.errorhandler(404)
@@ -153,4 +160,5 @@ def flash_helper():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        initialize_default_users()
     app.run(host="0.0.0.0", port=5000)

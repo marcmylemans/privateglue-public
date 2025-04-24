@@ -40,4 +40,18 @@
     </div>
   </div>
 </div>
+
+{% if DEMO_MODE %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const usernameField = document.getElementById("username");
+    const passwordField = document.getElementById("password");
+    if (usernameField && passwordField) {
+      usernameField.value = "demo";
+      passwordField.value = "privateglue";
+    }
+  });
+</script>
+{% endif %}
+
 {% endblock %}

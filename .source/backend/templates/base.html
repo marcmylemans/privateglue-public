@@ -9,6 +9,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
 </head>
 <body>
+  {% if DEMO_MODE %}
+<div class="alert alert-warning text-center mb-0 rounded-0" role="alert" style="z-index: 1050;">
+  This is a demo instance. All data resets hourly. Not for production use.
+</div>
+{% endif %}
+
 
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
@@ -105,5 +111,16 @@
       }
     }
   </script>
+ {% if DEMO_MODE %}
+ <footer class="text-muted text-center small mt-5 mb-3">
+   <hr>
+   <p>
+    <a href="https://www.digitalocean.com/?refcode=e03b740d65fb&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"><img src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg" alt="DigitalOcean Referral Badge" /></a> •
+     <a href="https://github.com/marcmylemans/privateglue-public" target="_blank">GitHub</a> •
+     <strong>PrivateGlue Demo Instance</strong>
+   </p>
+ </footer>
+ {% endif %}
+  
 </body>
 </html>
