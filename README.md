@@ -41,6 +41,8 @@ Ideal for:
 
 ## Getting Started
 
+[Live DEMO version](https://privateglue.demo.mylemans.online/)
+
 1. Clone this repository.
 2. Run using Docker:
 
