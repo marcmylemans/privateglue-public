@@ -138,6 +138,9 @@ def first_run():
 @auth_bp.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
+    if current_user.username == "demo":
+        flash("The demo account cannot access profile settings.", "warning")
+        return redirect(url_for("index"))
     return render_template("auth/profile.html", user=current_user)
 
 @auth_bp.route("/change-password", methods=["POST"])

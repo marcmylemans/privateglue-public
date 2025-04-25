@@ -4,6 +4,14 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+
+## [0.6.6-beta] - 2025-04-25
+
+### Fixed
+- Disable /profile access for demo user
+
+---
+
 ## [0.6.6-beta] - 2025-04-25
 
 ### Added
