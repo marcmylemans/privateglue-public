@@ -12,6 +12,7 @@ from backend.routes.auth import auth_bp
 from backend.routes.admin import admin_bp
 from backend.routes.credentials import credentials_bp
 from backend.utils.setup_users import initialize_default_users
+from backend.utils.db_upgrade import check_and_upgrade_database
 
 # Ensure SQLite path is available
 os.makedirs("/app/data", exist_ok=True)
@@ -160,5 +161,6 @@ def flash_helper():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
+        check_and_upgrade_database()
         initialize_default_users()
     app.run(host="0.0.0.0", port=5000)

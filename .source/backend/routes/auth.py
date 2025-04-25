@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from backend.models.users import User
-from backend.forms.auth import LoginForm, RegistrationForm
+from backend.forms.auth import LoginForm, RegistrationForm, ChangePasswordForm
 from backend.extensions import db
 from backend.utils.backup import extract_backup_zip
 from backend.utils.reboot import shutdown_server
@@ -26,8 +26,11 @@ def login():
             remember = form.remember.data
             session.permanent = remember  # True = persistent; False = expires on browser close or app stop
             login_user(user, remember=remember)
-            flash("Logged in successfully.", "success")
-            return redirect(request.args.get("next") or url_for("index"))
+            if user.force_password_reset:
+                flash("You must change your password before continuing.", "warning")
+                return redirect(url_for('auth.force_change_password'))
+            else:
+                return redirect(url_for('index'))
         else:
             flash("Invalid username or password", "danger")
 
@@ -131,3 +134,61 @@ def first_run():
             return redirect(url_for("auth.register"))
 
     return render_template("auth/first_run.html", zip_found=zip_found)
+
+@auth_bp.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    return render_template("auth/profile.html", user=current_user)
+
+@auth_bp.route("/change-password", methods=["POST"])
+@login_required
+def change_password():
+    current_password = request.form.get("current_password")
+    new_password = request.form.get("new_password")
+    confirm_password = request.form.get("confirm_new_password")
+
+    if not check_password_hash(current_user.password_hash, current_password):
+        flash("Current password is incorrect.", "danger")
+        return redirect(url_for("auth.profile"))
+
+    if new_password != confirm_password:
+        flash("New passwords do not match.", "danger")
+        return redirect(url_for("auth.profile"))
+
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters long.", "danger")
+        return redirect(url_for("auth.profile"))
+
+    current_user.set_password(new_password)
+    db.session.commit()
+    flash("Password updated successfully.", "success")
+    return redirect(url_for("auth.profile"))
+
+
+@auth_bp.route("/delete-account", methods=["POST"])
+@login_required
+def delete_account():
+    user_id = current_user.id
+    db.session.delete(current_user)
+    db.session.commit()
+    flash("Your account has been deleted.", "info")
+    return redirect(url_for("auth.logout"))
+
+
+@auth_bp.route("/force-change-password", methods=["GET", "POST"])
+@login_required
+def force_change_password():
+    if not current_user.force_password_reset:
+        return redirect(url_for('index'))
+
+    form = ChangePasswordForm()
+
+    if form.validate_on_submit():
+        current_user.set_password(form.new_password.data)
+        current_user.force_password_reset = False
+        db.session.commit()
+        flash("Password updated successfully. Please login again.", "success")
+        logout_user()
+        return redirect(url_for('auth.login'))
+
+    return render_template("auth/force_change_password.html", form=form)

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Manage Users - PrivateGlue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2>Manage Users</h2>
+
+  <table class="table table-striped align-middle mt-3">
+    <thead>
+      <tr>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Force Password Reset</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+      <tr>
+        <td>{{ user.username }}</td>
+        <td>{{ user.role }}</td>
+        <td>
+          {% if user.force_password_reset %}
+            <span class="badge bg-warning text-dark">Yes</span>
+          {% else %}
+            <span class="badge bg-success">No</span>
+          {% endif %}
+        </td>
+        <td class="d-flex gap-2">
+          <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+          <a href="{{ url_for('admin.reset_user_password', user_id=user.id) }}" class="btn btn-sm btn-outline-warning">Reset Password</a>
+          <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}" onsubmit="return confirm('Are you sure you want to delete this user?');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a href="{{ url_for('admin.create_user') }}" class="btn btn-success mt-3">Add New User</a>
+</div>
+{% endblock %}

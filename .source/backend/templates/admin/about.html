@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}About - PrivateGlue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">System Information</h2>
+  <div class="card">
+    <div class="card-body">
+      <table class="table table-hover">
+        <tbody>
+          {% for key, value in system_info.items() %}
+            <tr>
+              <th>{{ key }}</th>
+              <td>{{ value }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <hr>
+      <p>
+        View the <a href="https://github.com/marcmylemans/privateglue-public" target="_blank">GitHub repository</a> or check the <a href="https://github.com/marcmylemans/privateglue-public/blob/main/.source/documentation/ROADMAP.md" target="_blank">project roadmap</a>.
+      </p>
+    </div>
+  </div>
+</div>
+{% endblock %}

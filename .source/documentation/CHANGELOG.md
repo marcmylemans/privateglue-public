@@ -4,6 +4,40 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## [0.6.6-beta] - 2025-04-25
+
+### Added
+- New **About / System Info** page (admin-only) with:
+  - App version, mode (Demo/Production), and current time
+  - Database engine and counts for users, devices, notes, credentials
+- Icon added for About page in the navbar (admin dropdown)
+
+### Fixed
+- Visibility issue for linked notes on device detail pages
+- Resolved several Flask `NameError` and `BuildError` exceptions
+- Corrected `datetime` usage in the system info page
+
+---
+
+## [v0.6.5-demo] - 2025-04-24
+
+### Added
+- Demo mode support (`DEMO_MODE=True`) via environment variable:
+  - Displays a persistent banner warning that the instance resets hourly.
+  - Adds a custom footer with a "Powered by DigitalOcean" badge and GitHub project link.
+  - Pre-fills demo login credentials on the login screen (read-only/editor access).
+- Footer now shows in all views with clean styling in both light/dark modes.
+
+### Changed
+- Restructured footer layout to be visually cleaner and more aligned with GitHub’s aesthetic.
+- Improved context processor to cleanly inject `DEMO_MODE` for all templates.
+
+### Notes
+- This version is intended for preview and testing purposes only.
+- Do **not** use this version in production.
+
+---
+
 ## [0.6.5] - 2025-04-23
 ### Added
 - Custom 404 and 403 error pages with clean layout

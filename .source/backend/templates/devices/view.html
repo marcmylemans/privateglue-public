@@ -36,9 +36,9 @@
   {% if notes %}
     <h5 class="mb-3">Linked Notes</h5>
     <ul class="list-group">
-      {% for note in notes %}
+      {% for note in linked_notes %}
         <li class="list-group-item">
-          <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note[:-3] }}</a>
+          <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note }}</a>
         </li>
       {% endfor %}
     </ul>
