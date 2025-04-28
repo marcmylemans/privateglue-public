@@ -34,7 +34,7 @@ For multiple hosts, choose **Import Devices**, download the CSV template, popula
 ![Download CSV template](https://mylemans.online/assets/img/privateglue/step-15.png)  
 *Template format for bulk imports*
 
-![Imported Devices](https://mylemans.online/assets/img/privateglue/step-15.png)  
+![Imported Devices](https://mylemans.online/assets/img/privateglue/step-33.png)  
 *Imported Devices*
 
 
