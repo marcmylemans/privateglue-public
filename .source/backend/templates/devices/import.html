@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}Import Devices - PrivateGlue{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4">Import Devices</h2>
+
+  <div class="alert alert-info">
+    <strong>Step 1:</strong>
+    <a href="{{ url_for('devices.import_devices_template') }}">Download CSV template</a>
+    (contains only headers matching your Device fields).
+  </div>
+
+  <form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label for="csvfile" class="form-label">Step 2: Upload filled CSV</label>
+      <input type="file" class="form-control" id="csvfile" name="csvfile" accept=".csv" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Import</button>
+    <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary ms-2">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% block title %}{{ device.hostname }} - Device{% endblock %}
 
 {% block content %}
@@ -12,15 +12,44 @@
     </div>
   </div>
 
+    <!-- Proxmox Auto-Detect and Fetch UI -->
+  {% if device.operating_system|lower in ['proxmox', 'proxmox ve'] %}
+    <div class="mb-4">
+      {% if not device.credentials %}
+        <div class="alert alert-warning d-flex align-items-center" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <div>
+            Proxmox VE detected but no credentials linked.
+            <a href="{{ url_for('devices.add_credential', id=device.id) }}" class="alert-link">Add credentials</a> using the built‑in form to enable auto‑fetching of host details.
+          </div>
+        </div>
+      {% else %}
+        <div class="mb-3">
+          <a href="{{ url_for('devices.fetch_device_info', id=device.id) }}" 
+             class="btn btn-sm btn-outline-info">
+            Fetch Proxmox Details
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- Device Info Card -->
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="card-title">Device Info</h5>
+      <p class="mb-1"><strong>Hostname:</strong> {{ device.hostname }}</p>
       <p class="mb-1"><strong>IP Address:</strong> {{ device.ip_address or "—" }}</p>
       <p class="mb-1"><strong>Type:</strong> {{ device.device_type or "—" }}</p>
+      <p class="mb-1"><strong>Operating System:</strong> {{ device.operating_system or "—" }}</p>
+      <p class="mb-1"><strong>OS Version:</strong> {{ device.os_version or "—" }}</p>
+      <p class="mb-1"><strong>Serial Number:</strong> {{ device.serial_number or "—" }}</p>
+      <p class="mb-1"><strong>License Key:</strong> {{ device.license_key or "—" }}</p>
       <p class="mb-1"><strong>Location:</strong> {{ device.location or "—" }}</p>
     </div>
   </div>
 
+  <!-- Linked Credentials -->
   {% if credentials %}
     <h5 class="mb-3">Linked Credentials</h5>
     <ul class="list-group mb-4">
@@ -33,7 +62,8 @@
     </ul>
   {% endif %}
 
-  {% if notes %}
+  <!-- Linked Notes -->
+  {% if linked_notes %}
     <h5 class="mb-3">Linked Notes</h5>
     <ul class="list-group">
       {% for note in linked_notes %}
@@ -44,4 +74,30 @@
     </ul>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById('fetchProxmoxBtn');
+      const spinner = document.getElementById('fetchSpinner');
+      const container = document.getElementById('proxmoxDetailsContainer');
+      if (btn) {
+        btn.addEventListener('click', async function() {
+          spinner.classList.remove('d-none');
+          btn.disabled = true;
+          const resp = await fetch(`{{ url_for('devices.fetch_device_info', id=device.id) }}`);
+          if (resp.ok) {
+            const html = await resp.text();
+            container.innerHTML = html;
+          } else {
+            container.innerHTML = '<div class="alert alert-danger">Error fetching details.</div>';
+          }
+          spinner.classList.add('d-none');
+          btn.disabled = false;
+        });
+      }
+    });
+  </script>
 {% endblock %}

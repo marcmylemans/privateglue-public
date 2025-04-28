@@ -4,8 +4,30 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## [0.6.7-beta] – 2025-04-28
+### Added
+- Experimental Proxmox Auto-Fetch:
+  - Detect Proxmox VE by OS field and prompt to link credentials
+  - Pull host summary (CPU, memory, uptime), VM and LXC stats, storage pools via Proxmox API
+  - Human-friendly units (GiB, “3 d 4 h 15 m”, etc.) with graceful fallbacks
+- Import Devices wizard:
+  - “Import Devices” button on the devices list
+  - Downloadable CSV template matching device model fields
+  - CSV upload form to bulk-create devices
 
-## [0.6.6-beta] - 2025-04-25
+### Changed
+- Moved “Delete” action off the device list into the edit/detail views
+- Enhanced credential form to prefill title, username, and pre-select linked devices
+
+### Fixed
+- Robust byte-formatting guard to handle non-numeric or nested memory fields
+
+### Removed
+- Direct “Download CSV Template” button (now part of the import wizard)
+
+---
+
+## [0.6.6-beta2] - 2025-04-25
 
 ### Fixed
 - Disable /profile access for demo user

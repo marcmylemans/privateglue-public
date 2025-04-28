@@ -4,34 +4,55 @@
 {% block content %}
 <div class="container-fluid mt-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">Devices <small class="text-muted fs-6">({{ devices|length }})</small></h2>
-    <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary mb-3">Add Device</a>
-  </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">Devices <small class="text-muted fs-6">({{ devices|length }})</small></h2>
+      <div>
+        <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary mb-3">Add Device</a>
+        <a href="{{ url_for('devices.import_devices') }}"
+           class="btn btn-outline-secondary mb-3 ms-2">
+          Import Devices
+        </a>
+      </div>
+    </div>
 
   <!-- Filter Bar -->
-  <form method="GET" action="{{ url_for('devices.list_devices') }}" class="row g-2 align-items-end mb-3">
+  <form method="GET"
+        action="{{ url_for('devices.list_devices') }}"
+        class="row g-2 align-items-end mb-3">
     <div class="col-md-3">
       <label for="type" class="form-label mb-0">Type</label>
-      <select name="type" id="type" class="form-select form-select-sm">
+      <select name="type"
+              id="type"
+              class="form-select form-select-sm">
         <option value="">All Types</option>
         {% for type in all_types %}
-          <option value="{{ type }}" {% if filter_type == type %}selected{% endif %}>{{ type }}</option>
+          <option value="{{ type }}"
+                  {% if filter_type == type %}selected{% endif %}>
+            {{ type }}
+          </option>
         {% endfor %}
       </select>
     </div>
     <div class="col-md-3">
       <label for="location" class="form-label mb-0">Location</label>
-      <select name="location" id="location" class="form-select form-select-sm">
+      <select name="location"
+              id="location"
+              class="form-select form-select-sm">
         <option value="">All Locations</option>
         {% for location in all_locations %}
-          <option value="{{ location }}" {% if filter_location == location %}selected{% endif %}>{{ location }}</option>
+          <option value="{{ location }}"
+                  {% if filter_location == location %}selected{% endif %}>
+            {{ location }}
+          </option>
         {% endfor %}
       </select>
     </div>
     <div class="col-md-auto">
       <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
-      <a href="{{ url_for('devices.list_devices', clear=1) }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+      <a href="{{ url_for('devices.list_devices', clear=1) }}"
+         class="btn btn-sm btn-outline-secondary">
+        Reset
+      </a>
     </div>
   </form>
 
@@ -53,7 +74,7 @@
 
   <!-- Device Table -->
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table class="table table-dark table-hover align-middle">
       <thead class="table-light">
         <tr>
           <th scope="col">Hostname</th>
@@ -65,24 +86,38 @@
       </thead>
       <tbody>
         {% for device in devices %}
-          <tr>
+          <tr style="cursor: pointer;"
+              onclick="window.location='{{ url_for('devices.view_device', id=device.id) }}'">
             <td>{{ device.hostname }}</td>
-            <td>{{ device.ip_address }}</td>
-            <td>{{ device.device_type }}</td>
-            <td>{{ device.location }}</td>
+            <td>{{ device.ip_address or '—' }}</td>
+            <td>{{ device.device_type or '—' }}</td>
+            <td>{{ device.location or '—' }}</td>
             <td class="text-end">
-              <a href="{{ url_for('devices.view_device', id=device.id) }}" class="btn btn-sm btn-outline-info" title="View">View</a>
-              <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit">Edit</a>
-              <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-sm btn-outline-dark" title="Clone">Clone</a>
+              <a href="{{ url_for('devices.edit_device', id=device.id) }}"
+                 class="btn btn-sm btn-outline-secondary"
+                 title="Edit">
+                Edit
+              </a>
+              <a href="{{ url_for('devices.clone_device', id=device.id) }}"
+                 class="btn btn-sm btn-outline-dark"
+                 title="Clone">
+                Clone
+              </a>
             </td>
           </tr>
         {% else %}
           <tr>
-            <td colspan="5" class="text-center text-muted">No devices found.</td>
+            <td colspan="5" class="text-center text-muted">
+              No devices found.
+            </td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
 {% endblock %}

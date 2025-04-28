@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h3>Proxmox Details for {{ device.hostname }}</h3>
+
+  <!-- Host Summary -->
+  <h4>Host Summary</h4>
+  {% for node, stat in details.summary.items() %}
+    <div class="card mb-2">
+      <div class="card-body">
+        <h5>{{ node }}</h5>
+        <ul>
+          <li>CPU Load: {{ stat.cpu_pct }} %</li>
+          <li>Memory: {{ stat.mem_used }} / {{ stat.mem_total }}</li>
+          <li>Uptime: {{ stat.uptime }}</li>
+        </ul>
+      </div>
+    </div>
+  {% endfor %}
+
+  <!-- Virtual Machines -->
+  <h4 class="mt-4">Virtual Machines</h4>
+  <ul class="list-group mb-4">
+    {% for vm in details.vms %}
+      <li class="list-group-item">
+        <strong>{{ vm.name }}</strong> on {{ vm.node }} —
+        Status: {{ vm.status }},
+        CPU: {{ vm.cpu_pct }} %,
+        Mem: {{ vm.mem_used }} / {{ vm.mem_total }},
+        Uptime: {{ vm.uptime }}
+      </li>
+    {% else %}
+      <li class="list-group-item text-muted">No VMs found.</li>
+    {% endfor %}
+  </ul>
+
+  <!-- LXC Containers -->
+  <h4 class="mt-4">LXC Containers</h4>
+  <ul class="list-group mb-4">
+    {% for ct in details.containers %}
+      <li class="list-group-item">
+        <strong>{{ ct.name }}</strong> on {{ ct.node }} —
+        Status: {{ ct.status }},
+        CPU: {{ ct.cpu_pct }} %,
+        Mem: {{ ct.mem_used }} / {{ ct.mem_total }},
+        Uptime: {{ ct.uptime }}
+      </li>
+    {% else %}
+      <li class="list-group-item text-muted">No containers found.</li>
+    {% endfor %}
+  </ul>
+
+  <!-- Storage Pools -->
+  <h4 class="mt-4">Storage Pools</h4>
+  <ul class="list-group mb-4">
+    {% for st in details.storage %}
+      <li class="list-group-item">
+        <strong>{{ st.storage }}</strong> ({{ st.type }}) —
+        Used: {{ st.used }},
+        Available: {{ st.available }}
+        {% if st.note %}
+          <br><small class="text-muted">{{ st.note }}</small>
+        {% endif %}
+      </li>
+    {% else %}
+      <li class="list-group-item text-muted">No storage pools found.</li>
+    {% endfor %}
+  </ul>
+
+  <a href="{{ url_for('devices.view_device', id=device.id) }}"
+     class="btn btn-secondary mt-3">Back</a>
+</div>
+{% endblock %}

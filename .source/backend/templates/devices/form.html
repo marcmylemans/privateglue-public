@@ -22,22 +22,70 @@
   </h2>
 
   <form method="POST" action="{% if clone %}{{ url_for('devices.add_device') }}{% elif device %}{{ url_for('devices.edit_device', id=device.id) }}{% else %}{{ url_for('devices.add_device') }}{% endif %}">
+    <!-- Hostname -->
     <div class="mb-3">
-      <label class="form-label">Hostname</label>
+      <label class="form-label">Hostname
+        <span class="help-icon" data-toggle="tooltip" title="Unique name identifying your device on the network.">(?)</span>
+      </label>
       <input type="text" class="form-control" name="hostname" value="{{ device.hostname if device else '' }}" required>
     </div>
+
+    <!-- IP Address -->
     <div class="mb-3">
-      <label class="form-label">IP Address</label>
+      <label class="form-label">IP Address
+        <span class="help-icon" data-toggle="tooltip" title="IPv4 or IPv6 address assigned to the device (e.g. 192.168.1.10).">(?)</span>
+      </label>
       <input type="text" class="form-control" name="ip_address" value="{{ device.ip_address if device else '' }}">
     </div>
+
+    <!-- Device Type -->
     <div class="mb-3">
-      <label class="form-label">Device Type</label>
-      <input type="text" class="form-control" name="device_type" value="{{ device.device_type if device else '' }}">
+      <label class="form-label">Device Type
+        <span class="help-icon" data-toggle="tooltip" title="Category of device (e.g. Router, Switch, Server, VM).">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="device_type" value="{{ device.device_type if device else '' }}" required>
     </div>
+
+    <!-- Operating System -->
     <div class="mb-3">
-      <label class="form-label">Location</label>
+      <label class="form-label">Operating System
+        <span class="help-icon" data-toggle="tooltip" title="Name of the OS running on the device (e.g. Ubuntu, Windows Server).">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="operating_system" value="{{ device.operating_system if device else '' }}">
+    </div>
+
+    <!-- OS Version -->
+    <div class="mb-3">
+      <label class="form-label">OS Version
+        <span class="help-icon" data-toggle="tooltip" title="Specific OS version (e.g. 20.04 LTS, 2019 Datacenter).">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="os_version" value="{{ device.os_version if device else '' }}">
+    </div>
+
+    <!-- Serial Number -->
+    <div class="mb-3">
+      <label class="form-label">Serial Number
+        <span class="help-icon" data-toggle="tooltip" title="Manufacturer’s serial number for inventory tracking.">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="serial_number" value="{{ device.serial_number if device else '' }}">
+    </div>
+
+    <!-- License Key -->
+    <div class="mb-3">
+      <label class="form-label">License Key
+        <span class="help-icon" data-toggle="tooltip" title="Software license key or asset tag associated with the device.">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="license_key" value="{{ device.license_key if device else '' }}">
+    </div>
+
+    <!-- Location -->
+    <div class="mb-3">
+      <label class="form-label">Location
+        <span class="help-icon" data-toggle="tooltip" title="Physical or logical location (e.g. Home Office, Rack A1).">(?)</span>
+      </label>
       <input type="text" class="form-control" name="location" value="{{ device.location if device else '' }}">
     </div>
+
     <button type="submit" class="btn btn-success">Save</button>
     <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary">Cancel</a>
   </form>
@@ -62,4 +110,16 @@
     <a class="btn btn-outline-primary mt-3" href="{{ url_for('devices.clone_device', id=device.id) }}">Clone Device</a>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+      tooltipTriggerList.forEach(function(el) {
+        new bootstrap.Tooltip(el);
+      });
+    });
+  </script>
 {% endblock %}

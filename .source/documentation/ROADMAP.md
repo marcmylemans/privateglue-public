@@ -4,6 +4,12 @@
 
 ## ✅ Completed Sprints
 
+### v0.6.7-beta
+- Proxmox Auto-Fetch
+- Import Devices Wizard 
+- UI Refinements
+- Data Handling Fixes
+
 ### **v0.6.0 – v0.6.2**
 - Core functionality for Devices, Notes, and Credentials
 - Linked devices and tags in markdown notes
