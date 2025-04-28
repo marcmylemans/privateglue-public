@@ -23,19 +23,8 @@ Ideal for:
 
 ## Screenshots
 
-### Dashboard Overview
-![Dashboard Overview](https://mylemans.online/assets/img/privateglue/dashboard.png)
+[Screenshots.md](.source/documentation/Screenshots.md)
 
-### Device View
-![Device View](https://mylemans.online/assets/img/privateglue/device.png)
-
-### Create a Note
-![Create Note](https://mylemans.online/assets/img/privateglue/note.png)
-
-### Add Credential
-![Add Credential](https://mylemans.online/assets/img/privateglue/credential.png)
-
-> _Screenshots taken from version 0.6.2_
 
 ---
 
