@@ -34,6 +34,10 @@ For multiple hosts, choose **Import Devices**, download the CSV template, popula
 ![Download CSV template](https://mylemans.online/assets/img/privateglue/step-15.png)  
 *Template format for bulk imports*
 
+![Imported Devices](https://mylemans.online/assets/img/privateglue/step-15.png)  
+*Imported Devices*
+
+
 ## 4. Managing Credentials
 Under **Credentials**, securely store and manage your Proxmox (or other) login details.
 
