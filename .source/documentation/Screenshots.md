@@ -1,8 +1,6 @@
 # PrivateGlue UI Walkthrough
 *Last updated: 28-04-2025*
 
-A concise overview of the PrivateGlue web interface, highlighting key workflows with representative screenshots.
-
 ## 1. First-Run Wizard
 On first launch (when no users exist), you can restore a backup or skip straight to creating your first admin account.
 
