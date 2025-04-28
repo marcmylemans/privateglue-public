@@ -1,81 +1,69 @@
 # PrivateGlue UI Walkthrough
 *Last updated: 28-04-2025*
 
-This guide provides a concise overview of the PrivateGlue web interface, highlighting key workflows with representative screenshots.
+A concise overview of the PrivateGlue web interface, highlighting key workflows with representative screenshots.
 
-## 1. First run Wizard
-When the application first starts and detects no users, you have the option to restore a previous backup or skip to register a new user.
+## 1. First-Run Wizard
+On first launch (when no users exist), you can restore a backup or skip straight to creating your first admin account.
 
-![Skip Restore](https://mylemans.online/assets/img/privateglue//step-0.png)  
-*Step 1: Skip and Register New User*
+![Skip restore and register new user](https://mylemans.online/assets/img/privateglue/step-0.png)  
+*Step 1: Skip restore to register a new user*
 
-![Create Admin User](https://mylemans.online/assets/img/privateglue//step-2.png)  
-*Step 2: Enter username and password for your first user/admin account.*
+![Create your first admin user](https://mylemans.online/assets/img/privateglue/step-2.png)  
+*Step 2: Enter username and password for the initial admin account*
 
 ## 2. Dashboard Overview
-The Dashboard page shows your devices, recent activity, and quick links.
+The Dashboard provides an at-a-glance view of your registered devices, recent activity, and quick-action links.
 
-![Dashboard overview](https://mylemans.online/assets/img/privateglue//step-3.png)  
-*Your device inventory and activity at a glance*
+![Dashboard overview](https://mylemans.online/assets/img/privateglue/step-3.png)  
+*Device inventory, status updates, and shortcuts*
 
 ## 3. Managing Devices
-Navigate to **Devices** in the sidebar to view and manage your devices.
+Navigate to **Devices** in the sidebar to add, edit or bulk-import your hosts.
 
 ### 3.1 Add a Device
-Click the **Add Device** button to add a device.
+Click **Add Device**, then fill in the form with your host’s details.
 
-![Enter device details](https://mylemans.online/assets/img/privateglue//step-9.png)  
-*Enter device details*
+![Enter device details](https://mylemans.online/assets/img/privateglue/step-9.png)  
+*Provide device name, host address, credentials reference, etc.*
 
 ### 3.2 Bulk Import
-To import multiple devices, click **Import Devices**, download the CSV template, fill in your host details, and upload.
+For multiple hosts, choose **Import Devices**, download the CSV template, populate it, and upload.
 
-![Import devices screen](https://mylemans.online/assets/img/privateglue//step-10.png)  
+![Import devices screen](https://mylemans.online/assets/img/privateglue/step-10.png)  
 *Upload your completed CSV*
 
-![Download CSV template](https://mylemans.online/assets/img/privateglue//step-15.png)  
-*CSV format for bulk imports*
+![Download CSV template](https://mylemans.online/assets/img/privateglue/step-15.png)  
+*Template format for bulk imports*
 
 ## 4. Managing Credentials
-Under **Credentials**, store and manage your Device Credentials securely.
+Under **Credentials**, securely store and manage your Proxmox (or other) login details.
 
-![Credentials list](https://mylemans.online/assets/img/privateglue//step-37.png)  
-*View saved credentials*
+![Credentials list](https://mylemans.online/assets/img/privateglue/step-37.png)  
+*All saved credentials at a glance*
 
-Click **View Credential** to see more details and fetch Proxmox-specific information.
+Click **View** next to any credential to see details or fetch Proxmox-specific information.
 
-![View Credentials](https://mylemans.online/assets/img/privateglue//step-38.png)  
-*View Credentials*
+![View credential details](https://mylemans.online/assets/img/privateglue/step-38.png)  
+*Inspect username, URL, fingerprint, etc.*
 
-![Fetch Proxmox](https://mylemans.online/assets/img/privateglue//step-45.png)  
-*Fetch Proxmox*
+![Fetch Proxmox data](https://mylemans.online/assets/img/privateglue/step-45.png)  
+*Retrieve license key, version, and other metadata*
 
-![Proxmox Details](https://mylemans.online/assets/img/privateglue//step-46.png)  
-*Proxmox Details*
+## 5. Notes & Live Preview
+On each device page, use the **Notes** tab to author Markdown-formatted text. Toggle **Live Preview** to see it rendered instantly.
 
-## 5. Notes and Live Preview
-Use the **Notes** section on a device to add markdown-formatted text. Use the **Live Preview** to see your changes rendered instantly.
+![Adding notes](https://mylemans.online/assets/img/privateglue/step-18.png)  
+*Compose notes in Markdown*
 
-![Adding notes](https://mylemans.online/assets/img/privateglue//step-18.png)  
-*Add notes*
+![Live preview of notes](https://mylemans.online/assets/img/privateglue/step-23.png)  
+*Render output updates in real time*
 
-![Live preview of notes](https://mylemans.online/assets/img/privateglue//step-23.png)  
-*See rendered output as you type*
+## 6. System Settings & Backup
+From the user menu (top-right), access **System Information** and **Your Profile** to update personal settings or download a full configuration backup.
 
-## 6. Account and Backup
-Access **System Information**, **Your Profile** to update personal settings and download a backup of your configuration from the dashboard.
+![System Information & Profile menu](https://mylemans.online/assets/img/privateglue/step-60.png)  
+*Access system info, profile settings, and backup options*
 
-![System Information](https://mylemans.online/assets/img/privateglue//step-59.png)  
-*Open your profile settings*
-
-![Profile menu](https://mylemans.online/assets/img/privateglue//step-60.png)  
-*Open your profile settings*
-
-![Download backup](https://mylemans.online/assets/img/privateglue//step-63.png)  
-*Save your data locally*
-
-![Download backup](https://mylemans.online/assets/img/privateglue//step-63.png)  
-*Save your data locally*
-
-
-
+![Download backup](https://mylemans.online/assets/img/privateglue/step-63.png)  
+*Save your entire configuration as a ZIP file*
