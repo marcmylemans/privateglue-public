@@ -34,12 +34,20 @@
     </div>
   {% endif %}
 
+  {% if device.device_type.lower() == 'switch' %}
+  <a href="{{ url_for('network.scan_device', device_id=device.id) }}"
+     class="btn btn-sm btn-primary">
+    Fetch Switch Info
+  </a>
+{% endif %}
+
   <!-- Device Info Card -->
   <div class="card mb-4">
     <div class="card-body">
       <h5 class="card-title">Device Info</h5>
       <p class="mb-1"><strong>Hostname:</strong> {{ device.hostname }}</p>
       <p class="mb-1"><strong>IP Address:</strong> {{ device.ip_address or "—" }}</p>
+      <p class="mb-1"><strong>MAC Address:</strong> {{ device.mac_address or "—" }}</p>
       <p class="mb-1"><strong>Type:</strong> {{ device.device_type or "—" }}</p>
       <p class="mb-1"><strong>Operating System:</strong> {{ device.operating_system or "—" }}</p>
       <p class="mb-1"><strong>OS Version:</strong> {{ device.os_version or "—" }}</p>

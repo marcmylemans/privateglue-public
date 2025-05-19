@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>SNMP Scan: {{ device.hostname }}</h2>
+
+  <dl class="row">
+    <dt class="col-sm-3">System Description</dt>
+    <dd class="col-sm-9">{{ data.sys_descr or "N/A" }}</dd>
+
+    <dt class="col-sm-3">System Uptime</dt>
+    <dd class="col-sm-9">{{ data.sys_uptime or "N/A" }}</dd>
+  </dl>
+
+  <h4>Interfaces</h4>
+  <table class="table table-sm">
+    <thead>
+      <tr><th>#</th><th>Name</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for iface in data.interfaces %}
+      <tr>
+        <td>{{ iface.index }}</td>
+        <td>{{ iface.name }}</td>
+        <td>
+          {% if iface.status == 1 %}Up{% else %}Down{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <h4>VLANs</h4>
+    <table class="table table-sm">
+    <thead><tr><th>ID</th><th>Name</th><th>Ports</th></tr></thead>
+    <tbody>
+    {% for vlan in data.vlans %}
+        <tr>
+        <td>{{ vlan.vlan_id }}</td>
+        <td>{{ vlan.name }}</td>
+        <td>
+            {% set ports = data.vlan_members[vlan.vlan_id] %}
+            {{ ports | join(', ') or 'None' }}
+        </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+{% endblock %}

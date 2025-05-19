@@ -10,6 +10,16 @@
 - UI Refinements
 - Data Handling Fixes
 
+### v0.6.8-beta
+- Secure network device discovery workflow (CSV import, header mapping, encoding fallback)
+- Search bar enabled with `/search` route
+- Standalone network probe (Python/Windows exe) for device discovery ([PrivateGlue-Probe](https://github.com/marcmylemans/PrivateGlue-Probe))
+- Backend API `/api/discovered-devices` for probe results, secured with API key
+- UI for reviewing/importing discovered devices (checkboxes, select all, selective import)
+- System info page improvements: API key display (with copy button), version from container tag or git
+- Automated API key generation and persistent storage for probe API
+- Documentation for probe usage, security, and build in PrivateGlue-Probe/README.md
+
 ### **v0.6.0 – v0.6.2**
 - Core functionality for Devices, Notes, and Credentials
 - Linked devices and tags in markdown notes

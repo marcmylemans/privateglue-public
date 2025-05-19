@@ -11,7 +11,14 @@
           {% for key, value in system_info.items() %}
             <tr>
               <th>{{ key }}</th>
-              <td>{{ value }}</td>
+              <td>
+                {% if key == 'API Key for Probe' %}
+                  <span id="probeApiKey">{{ value }}</span>
+                  <button class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText(document.getElementById('probeApiKey').innerText)">Copy</button>
+                {% else %}
+                  {{ value }}
+                {% endif %}
+              </td>
             </tr>
           {% endfor %}
         </tbody>

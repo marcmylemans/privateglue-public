@@ -1,6 +1,7 @@
 import os
 import io, csv
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response
+import secrets
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, jsonify, abort
 from flask_login import login_required
 from backend.extensions import db
 from backend.models.devices import Device
@@ -15,6 +16,19 @@ from werkzeug.utils import secure_filename
 
 devices_bp = Blueprint("devices", __name__, template_folder="../templates")
 
+discovered_devices_cache = []  # In-memory cache for demo; use DB for production
+
+API_KEY_PATH = os.path.join(os.path.dirname(__file__), '../../data/probe_api_key.txt')
+def get_or_create_probe_api_key():
+    if os.path.exists(API_KEY_PATH):
+        with open(API_KEY_PATH, 'r') as f:
+            return f.read().strip()
+    key = secrets.token_urlsafe(32)
+    os.makedirs(os.path.dirname(API_KEY_PATH), exist_ok=True)
+    with open(API_KEY_PATH, 'w') as f:
+        f.write(key)
+    return key
+API_KEY = get_or_create_probe_api_key()
 
 # --- ROUTES ---
 
@@ -61,6 +75,13 @@ def list_devices():
     all_types = db.session.query(Device.device_type).distinct().all()
     all_locations = db.session.query(Device.location).distinct().all()
 
+    discovered_count = 0
+    try:
+        from backend.routes.devices import discovered_devices_cache
+        discovered_count = len(discovered_devices_cache)
+    except Exception:
+        pass
+
     return render_template(
         "devices/index.html",
         devices=devices,
@@ -68,6 +89,7 @@ def list_devices():
         filter_location=filter_location,
         all_types=[t[0] for t in all_types if t[0]],
         all_locations=[l[0] for l in all_locations if l[0]],
+        discovered_count=discovered_count
     )
 
 
@@ -79,6 +101,7 @@ def add_device():
         device = Device(
             hostname         = request.form["hostname"],
             ip_address       = request.form.get("ip_address"),
+            mac_address      = request.form.get("mac_address"),
             device_type      = request.form["device_type"],
             operating_system = request.form.get("operating_system"),
             os_version       = request.form.get("os_version"),
@@ -102,6 +125,7 @@ def edit_device(id):
     if request.method == "POST":
         device.hostname         = request.form["hostname"]
         device.ip_address       = request.form.get("ip_address")
+        device.mac_address      = request.form.get("mac_address"),
         device.device_type      = request.form["device_type"]
         device.operating_system = request.form.get("operating_system")
         device.os_version       = request.form.get("os_version")
@@ -125,6 +149,7 @@ def clone_device(id):
     clone = Device(
         hostname         = f"{device.hostname}-copy",
         ip_address       = "",
+        mac_address       = "",
         device_type      = device.device_type,
         operating_system = device.operating_system,
         os_version       = device.os_version,
@@ -245,20 +270,68 @@ def fetch_device_info(id):
 @login_required
 @editor_required
 def import_devices():
+    expected_fields = [
+        'hostname','ip_address','mac_address','device_type',
+        'operating_system','os_version',
+        'serial_number','license_key','location'
+    ]
     if request.method == 'POST':
+        # If mapping form was submitted
+        if 'csv_content' in request.form:
+            import json
+            csv_content = request.form['csv_content']
+            stream = io.StringIO(json.loads(csv_content))
+            reader = csv.DictReader(stream)
+            # Build mapping from form
+            field_map = {field: request.form.get(f'map_{field}') for field in expected_fields}
+            created = 0
+            for row in reader:
+                device_kwargs = {field: row.get(field_map[field]) for field in expected_fields if field_map[field]}
+                if not device_kwargs.get('hostname'):
+                    continue  # skip if no hostname
+                device = Device(**device_kwargs)
+                db.session.add(device)
+                created += 1
+            db.session.commit()
+            flash(f'Successfully imported {created} devices (with mapping).', 'success')
+            return redirect(url_for('devices.list_devices'))
+
         file = request.files.get('csvfile')
         if not file or not file.filename.endswith('.csv'):
             flash('Please upload a valid .csv file', 'danger')
             return redirect(request.url)
 
-        stream = io.StringIO(file.stream.read().decode('utf-8'))
+        # Try to decode with utf-8, fallback to utf-16 or latin-1
+        file_bytes = file.stream.read()
+        for encoding in ['utf-8-sig', 'utf-16', 'latin-1']:
+            try:
+                decoded = file_bytes.decode(encoding)
+                break
+            except UnicodeDecodeError:
+                decoded = None
+        if decoded is None:
+            flash('Could not decode CSV file. Please ensure it is saved as UTF-8, UTF-16, or Latin-1.', 'danger')
+            return redirect(request.url)
+
+        stream = io.StringIO(decoded)
         reader = csv.DictReader(stream)
+        csv_headers = reader.fieldnames
+        if set(csv_headers) != set(expected_fields):
+            # Headers do not match, show mapping form
+            return render_template(
+                'devices/import_map.html',
+                csv_headers=csv_headers,
+                expected_fields=expected_fields,
+                csv_content=stream.getvalue()
+            )
+
+        # ...existing code for normal import...
         created = 0
         for row in reader:
-            # you may want to validate each field here
             device = Device(
                 hostname=row['hostname'],
                 ip_address=row.get('ip_address'),
+                mac_address=row.get('mac_address'),
                 device_type=row.get('device_type'),
                 operating_system=row.get('operating_system'),
                 os_version=row.get('os_version'),
@@ -282,7 +355,7 @@ def import_devices():
 @editor_required
 def import_devices_template():
     fieldnames = [
-        'hostname','ip_address','device_type',
+        'hostname','ip_address','mac_address','device_type',
         'operating_system','os_version',
         'serial_number','license_key','location'
     ]
@@ -293,3 +366,50 @@ def import_devices_template():
         mimetype='text/csv',
         headers={'Content-Disposition':'attachment; filename=devices_template.csv'}
     )
+
+@devices_bp.route('/api/discovered-devices', methods=['POST'])
+def api_discovered_devices():
+    if request.headers.get("X-API-KEY") != API_KEY:
+        abort(401)
+    data = request.get_json()
+    devices = data.get('devices', [])
+    global discovered_devices_cache
+    discovered_devices_cache = devices
+    return jsonify({'status': 'ok', 'count': len(devices)})
+
+@devices_bp.route('/devices/discovered')
+@login_required
+@editor_required
+def show_discovered_devices():
+    global discovered_devices_cache
+    return render_template('devices/discovered.html', devices=discovered_devices_cache)
+
+@devices_bp.route('/devices/discovered/import', methods=['POST'])
+@login_required
+@editor_required
+def import_discovered_devices():
+    global discovered_devices_cache
+    selected = request.form.getlist('selected')
+    created = 0
+    for idx, d in enumerate(discovered_devices_cache):
+        if str(idx) not in selected:
+            continue
+        if not d.get('ip_address'):
+            continue
+        device = Device(
+            hostname=d.get('hostname') or d.get('ip_address'),
+            ip_address=d.get('ip_address'),
+            mac_address=d.get('mac_address'),
+            device_type=d.get('device_type'),
+            operating_system=d.get('operating_system'),
+            os_version=d.get('os_version'),
+            serial_number=d.get('serial_number'),
+            license_key=d.get('license_key'),
+            location=d.get('location'),
+        )
+        db.session.add(device)
+        created += 1
+    db.session.commit()
+    discovered_devices_cache = []
+    flash(f'Imported {created} discovered devices.', 'success')
+    return redirect(url_for('devices.list_devices'))

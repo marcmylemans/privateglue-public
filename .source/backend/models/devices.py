@@ -4,6 +4,7 @@ class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column(db.String(255), nullable=False)
     ip_address = db.Column(db.String(45), nullable=True)
+    mac_address = db.Column(db.String(45), nullable=True)
     device_type = db.Column(db.String(100), nullable=True)
     operating_system = db.Column(db.String(100))
     os_version = db.Column(db.String(50))

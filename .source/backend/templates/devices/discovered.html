@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Discovered Devices{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Discovered Devices</h2>
+  {% if devices and devices|length > 0 %}
+    <form method="post" action="{{ url_for('devices.import_discovered_devices') }}">
+      <div class="mb-2">
+        <input type="checkbox" id="selectAll" onclick="toggleAll(this)">
+        <label for="selectAll" class="ms-1">Select All</label>
+      </div>
+      <table class="table table-bordered table-sm mt-3">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Hostname</th>
+            <th>IP Address</th>
+            <th>MAC Address</th>
+            <th>Type</th>
+            <th>OS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in devices %}
+          <tr>
+            <td><input type="checkbox" name="selected" value="{{ loop.index0 }}" class="device-checkbox"></td>
+            <td>{{ d.hostname or d.ip_address }}</td>
+            <td>{{ d.ip_address }}</td>
+            <td>{{ d.mac_address }}</td>
+            <td>{{ d.device_type }}</td>
+            <td>{{ d.operating_system }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit" class="btn btn-success">Import Selected</button>
+    </form>
+    <script>
+      function toggleAll(source) {
+        const checkboxes = document.querySelectorAll('.device-checkbox');
+        for (const cb of checkboxes) {
+          cb.checked = source.checked;
+        }
+      }
+    </script>
+  {% else %}
+    <div class="alert alert-info mt-4">No discovered devices available. Run the probe and refresh this page.</div>
+  {% endif %}
+</div>
+{% endblock %}

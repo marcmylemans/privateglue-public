@@ -46,8 +46,8 @@
           {% endif %}
         </ul>
 
-        <form class="d-flex me-3" onsubmit="showSearchAlert(); return false;">
-          <input class="form-control me-2" type="search" placeholder="Search (coming soon!)" id="searchInput">
+        <form class="d-flex me-3" method="GET" action="{{ url_for('search') }}">
+          <input class="form-control me-2" type="search" name="q" placeholder="Search..." id="searchInput" value="{{ request.args.get('q', '') }}">
           <button class="btn btn-outline-primary" type="submit">Search</button>
         </form>
         

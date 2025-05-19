@@ -15,6 +15,14 @@
       </div>
     </div>
 
+    <div class="mb-3">
+      {% if discovered_count and discovered_count > 0 %}
+        <a href="{{ url_for('devices.show_discovered_devices') }}" class="btn btn-warning">
+          <i class="bi bi-search"></i> {{ discovered_count }} Discovered Device{{ 's' if discovered_count > 1 else '' }} Ready to Import
+        </a>
+      {% endif %}
+    </div>
+
   <!-- Filter Bar -->
   <form method="GET"
         action="{{ url_for('devices.list_devices') }}"

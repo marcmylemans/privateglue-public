@@ -10,8 +10,24 @@ import zipfile
 import socket
 import platform
 from datetime import datetime
+import secrets
+import subprocess
 
 admin_bp = Blueprint("admin", __name__)
+
+def get_git_version():
+    try:
+        version = subprocess.check_output(['git', 'describe', '--tags', '--always'], cwd=os.path.dirname(__file__), stderr=subprocess.DEVNULL).decode().strip()
+        return version
+    except Exception:
+        return None
+
+def get_app_version():
+    # Prefer container version from environment, fallback to git version
+    version = os.environ.get("APP_VERSION")
+    if version:
+        return version
+    return get_git_version() or "unknown"
 
 @admin_bp.route("/admin/backup")
 @login_required
@@ -183,8 +199,12 @@ def about_page():
     note_count = len([f for f in os.listdir("/app/notes") if f.endswith(".md")])
     credential_count = Credential.query.count()
 
+    from backend.routes.devices import get_or_create_probe_api_key
+    api_key = get_or_create_probe_api_key()
+    version = get_app_version()
+
     system_info = {
-        "App Version": "v0.6.6",
+        "App Version": version,
         "App Mode": "Demo" if current_app.config.get("DEMO_MODE") else "Production",
         "Users": user_count,
         "Devices": device_count,
@@ -194,6 +214,7 @@ def about_page():
         "Python": platform.python_version(),
         "Platform": platform.system(),
         "Current Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "API Key for Probe": api_key,
     }
 
     return render_template("admin/about.html", system_info=system_info)

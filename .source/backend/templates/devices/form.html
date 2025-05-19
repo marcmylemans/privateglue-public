@@ -37,6 +37,14 @@
       </label>
       <input type="text" class="form-control" name="ip_address" value="{{ device.ip_address if device else '' }}">
     </div>
+    
+    <!-- MAC Address -->
+    <div class="mb-3">
+      <label class="form-label">MAC Address
+        <span class="help-icon" data-toggle="tooltip" title="MAC address assigned to the device (e.g. 00:15:5D:63:09:00).">(?)</span>
+      </label>
+      <input type="text" class="form-control" name="mac_address" value="{{ device.mac_address if device else '' }}">
+    </div>
 
     <!-- Device Type -->
     <div class="mb-3">

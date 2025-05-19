@@ -13,6 +13,7 @@ from backend.routes.admin import admin_bp
 from backend.routes.credentials import credentials_bp
 from backend.utils.setup_users import initialize_default_users
 from backend.utils.db_upgrade import check_and_upgrade_database
+from backend.routes.network import network_bp
 
 # Ensure SQLite path is available
 os.makedirs("/app/data", exist_ok=True)
@@ -50,6 +51,8 @@ app.register_blueprint(notes_bp)
 app.register_blueprint(auth_bp)
 app.register_blueprint(credentials_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(network_bp, url_prefix="/network")
+
 
 NOTES_DIR = "/app/notes"
 

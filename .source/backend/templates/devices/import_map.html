@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Map CSV Columns to Device Fields</h2>
+<form method="post" action="{{ url_for('devices.import_devices') }}">
+    <input type="hidden" name="csv_content" value="{{ csv_content|tojson|safe }}">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Device Field</th>
+                <th>CSV Column</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for field in expected_fields %}
+            <tr>
+                <td>{{ field }}</td>
+                <td>
+                    <select name="map_{{ field }}" class="form-control">
+                        <option value="">-- None --</option>
+                        {% for col in csv_headers %}
+                        <option value="{{ col }}">{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-primary">Import with Mapping</button>
+</form>
+{% endblock %}
