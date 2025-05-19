@@ -29,31 +29,6 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
-## [0.6.8-beta] – 2025-05-19
-
-### Added
-
-- Network Device Discovery Workflow:
-  - CSV import with header mapping and encoding fallback
-  - Search bar enabled with `/search` route
-  - Standalone network probe (Python/Windows exe) for device discovery (see [PrivateGlue-Probe](https://github.com/marcmylemans/PrivateGlue-Probe))
-  - Backend API `/api/discovered-devices` for probe results, secured with API key
-  - UI for reviewing/importing discovered devices (checkboxes, select all, selective import)
-  - System info page improvements: API key display (with copy button), version from container tag or git
-- Documentation for probe usage, security, and build in PrivateGlue-Probe/README.md
-
-### Changed
-
-- Automated API key generation and persistent storage for probe API
-- System info page now prefers container version (`APP_VERSION` env) over git tag
-
-### Fixed
-
-- Robust CSV import field mapping and error handling
-- UI/UX for device import and discovered devices review
-
----
-
 ## [0.6.7-beta] – 2025-04-28
 
 ### Added
