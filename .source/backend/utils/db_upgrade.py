@@ -35,6 +35,7 @@ def check_and_upgrade_database():
          new_columns = {
              "hostname": "TEXT NOT NULL DEFAULT ''",
              "ip_address": "TEXT",
+             "mac_address": "TEXT",
              "device_type": "TEXT",
              "operating_system": "TEXT",
              "os_version": "TEXT",

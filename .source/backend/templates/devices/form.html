@@ -51,7 +51,17 @@
       <label class="form-label">Device Type
         <span class="help-icon" data-toggle="tooltip" title="Category of device (e.g. Router, Switch, Server, VM).">(?)</span>
       </label>
-      <input type="text" class="form-control" name="device_type" value="{{ device.device_type if device else '' }}" required>
+      <select class="form-select" name="device_type" required>
+        {% set types = [
+          'Desktop', 'Laptop', 'Server', 'Switch', 'Router', 'AccessPoint', 'Printer', 'Firewall', 'NAS', 'IoT', 'VM', 'Phone', 'Tablet', 'Camera', 'Other'] %}
+        <option value="" disabled {% if not device or not device.device_type %}selected{% endif %}>Select type…</option>
+        {% for t in types %}
+          <option value="{{ t }}" {% if device and device.device_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+        {% if device and device.device_type and device.device_type not in types %}
+          <option value="{{ device.device_type }}" selected>{{ device.device_type }}</option>
+        {% endif %}
+      </select>
     </div>
 
     <!-- Operating System -->
