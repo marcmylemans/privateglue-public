@@ -382,7 +382,28 @@ def api_discovered_devices():
 @editor_required
 def show_discovered_devices():
     global discovered_devices_cache
-    return render_template('devices/discovered.html', devices=discovered_devices_cache)
+
+    # Fetch existing devices to check for duplicates
+    existing_devices = Device.query.with_entities(Device.hostname, Device.ip_address, Device.mac_address).all()
+
+    # Create sets for individual fields to check partial matches
+    existing_hostnames = set(d.hostname for d in existing_devices if d.hostname)
+    existing_ips = set(d.ip_address for d in existing_devices if d.ip_address)
+    existing_macs = set(d.mac_address for d in existing_devices if d.mac_address)
+
+    # Identify duplicates
+    combined_data = []
+    for d in discovered_devices_cache:
+        duplicate_fields = []
+        if d.get('hostname') in existing_hostnames:
+            duplicate_fields.append('hostname')
+        if d.get('ip_address') in existing_ips:
+            duplicate_fields.append('ip_address')
+        if d.get('mac_address') in existing_macs:
+            duplicate_fields.append('mac_address')
+        combined_data.append((d, duplicate_fields))
+
+    return render_template('devices/discovered.html', combined_data=combined_data)
 
 @devices_bp.route('/devices/discovered/import', methods=['POST'])
 @login_required
@@ -391,11 +412,21 @@ def import_discovered_devices():
     global discovered_devices_cache
     selected = request.form.getlist('selected')
     created = 0
+
+    # Fetch existing devices to check for duplicates
+    existing_devices = Device.query.with_entities(Device.hostname, Device.ip_address, Device.mac_address).all()
+    existing_set = set((d.hostname, d.ip_address, d.mac_address) for d in existing_devices)
+
     for idx, d in enumerate(discovered_devices_cache):
         if str(idx) not in selected:
             continue
         if not d.get('ip_address'):
             continue
+
+        # Check for duplicates
+        if (d.get('hostname'), d.get('ip_address'), d.get('mac_address')) in existing_set:
+            continue
+
         device = Device(
             hostname=d.get('hostname') or d.get('ip_address'),
             ip_address=d.get('ip_address'),
@@ -409,6 +440,7 @@ def import_discovered_devices():
         )
         db.session.add(device)
         created += 1
+
     db.session.commit()
     discovered_devices_cache = []
     flash(f'Imported {created} discovered devices.', 'success')

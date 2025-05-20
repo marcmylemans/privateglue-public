@@ -4,6 +4,24 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## [0.6.8-BETA2] - 2025-05-20
+
+### Added
+- Automatic database upgrade logic for SQLite:
+  - Adds missing columns (like `mac_address`) on container startup.
+  - Ensures compatibility with SQLAlchemy model changes without manual migration.
+- Improved startup flow in `app.py` to run `check_and_upgrade_database()` before `db.create_all()`.
+
+### Fixed
+- Startup crash due to missing `mac_address` column in `Device` model after upgrading container.
+
+### Notes
+- This is a temporary solution for SQLite users until full Alembic integration.
+- Future schema changes should transition to Alembic migrations for production readiness.
+
+
+---
+
 ## v0.6.8-beta – 2025-05-19
 
 ### Added

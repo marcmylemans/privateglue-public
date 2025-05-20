@@ -163,7 +163,7 @@ def flash_helper():
 
 if __name__ == "__main__":
     with app.app_context():
-        db.create_all()
         check_and_upgrade_database()
+        db.create_all()
         initialize_default_users()
     app.run(host="0.0.0.0", port=5000)

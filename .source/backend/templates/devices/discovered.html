@@ -3,7 +3,7 @@
 {% block content %}
 <div class="container mt-4">
   <h2>Discovered Devices</h2>
-  {% if devices and devices|length > 0 %}
+  {% if combined_data and combined_data|length > 0 %}
     <form method="post" action="{{ url_for('devices.import_discovered_devices') }}">
       <div class="mb-2">
         <input type="checkbox" id="selectAll" onclick="toggleAll(this)">
@@ -21,12 +21,12 @@
           </tr>
         </thead>
         <tbody>
-          {% for d in devices %}
-          <tr>
+          {% for d, duplicate_fields in combined_data %}
+          <tr class="{% if duplicate_fields %}table-warning{% endif %}">
             <td><input type="checkbox" name="selected" value="{{ loop.index0 }}" class="device-checkbox"></td>
-            <td>{{ d.hostname or d.ip_address }}</td>
-            <td>{{ d.ip_address }}</td>
-            <td>{{ d.mac_address }}</td>
+            <td class="{% if 'hostname' in duplicate_fields %}text-danger{% endif %}">{{ d.hostname or d.ip_address }}</td>
+            <td class="{% if 'ip_address' in duplicate_fields %}text-danger{% endif %}">{{ d.ip_address }}</td>
+            <td class="{% if 'mac_address' in duplicate_fields %}text-danger{% endif %}">{{ d.mac_address }}</td>
             <td>{{ d.device_type }}</td>
             <td>{{ d.operating_system }}</td>
           </tr>

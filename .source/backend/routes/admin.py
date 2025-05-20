@@ -204,7 +204,7 @@ def about_page():
     version = get_app_version()
 
     system_info = {
-        "App Version": version,
+        "App Version": "0.6.8-BETA2" if current_app.config.get("DEMO_MODE") else version,
         "App Mode": "Demo" if current_app.config.get("DEMO_MODE") else "Production",
         "Users": user_count,
         "Devices": device_count,
