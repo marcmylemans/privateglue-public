@@ -125,7 +125,7 @@ def edit_device(id):
     if request.method == "POST":
         device.hostname         = request.form["hostname"]
         device.ip_address       = request.form.get("ip_address")
-        device.mac_address      = request.form.get("mac_address"),
+        device.mac_address      = request.form.get("mac_address")
         device.device_type      = request.form["device_type"]
         device.operating_system = request.form.get("operating_system")
         device.os_version       = request.form.get("os_version")
