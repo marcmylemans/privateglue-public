@@ -13,7 +13,7 @@
   <h4>Interfaces</h4>
   <table class="table table-sm">
     <thead>
-      <tr><th>#</th><th>Name</th><th>Status</th></tr>
+      <tr><th>#</th><th>Name</th><th>Status</th><th>PVID (Untagged VLAN)</th></tr>
     </thead>
     <tbody>
       {% for iface in data.interfaces %}
@@ -23,21 +23,31 @@
         <td>
           {% if iface.status == 1 %}Up{% else %}Down{% endif %}
         </td>
+        <td>
+          {% set pvid = data.port_pvid[iface.index | int] %}
+          {{ pvid }}
+          {% set vlan = (data.vlans | selectattr('vlan_id', 'equalto', pvid) | list).0 %}
+          {% if vlan %} ({{ vlan.name }}){% endif %}
+        </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
   <h4>VLANs</h4>
     <table class="table table-sm">
-    <thead><tr><th>ID</th><th>Name</th><th>Ports</th></tr></thead>
+    <thead><tr><th>ID</th><th>Name</th><th>Untagged Ports</th><th>Tagged Ports</th></tr></thead>
     <tbody>
     {% for vlan in data.vlans %}
         <tr>
         <td>{{ vlan.vlan_id }}</td>
         <td>{{ vlan.name }}</td>
         <td>
-            {% set ports = data.vlan_members[vlan.vlan_id] %}
-            {{ ports | join(', ') or 'None' }}
+            {% set untagged = data.vlan_port_types[vlan.vlan_id]['untagged'] %}
+            {{ untagged | join(', ') or 'None' }}
+        </td>
+        <td>
+            {% set tagged = data.vlan_port_types[vlan.vlan_id]['tagged'] %}
+            {{ tagged | join(', ') or 'None' }}
         </td>
         </tr>
     {% endfor %}

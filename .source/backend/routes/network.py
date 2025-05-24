@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, flash, url_for, redirect
 from flask_login import login_required
 from backend.models.devices import Device
-from backend.utils.snmp import snmp_get, get_interface_table, get_vlans, get_port_pvid, get_vlan_membership
+from backend.utils.snmp import snmp_get, get_interface_table, get_vlans, get_port_pvid, get_vlan_membership, get_vlan_port_types
 
 network_bp = Blueprint("network", __name__, url_prefix="/network")
 
@@ -9,9 +9,9 @@ network_bp = Blueprint("network", __name__, url_prefix="/network")
 @login_required
 def scan_device(device_id):
     device = Device.query.get_or_404(device_id)
-    if device.device_type.lower() != "switch":
-        flash("SNMP scan only available for switches.", "warning")
-        return redirect(url_for("devices.view", device_id=device.id))
+    if device.device_type.lower() not in ["switch", "router", "accesspoint", "firewall"]:
+        flash("SNMP scan only available for supported device types.", "warning")
+        return redirect(url_for("devices.view_device", id=device.id))
 
     # <-- define host from the device record
     host = device.ip_address
@@ -23,5 +23,6 @@ def scan_device(device_id):
         "vlans":      get_vlans(host),
         "port_pvid":  get_port_pvid(host),
         "vlan_members": get_vlan_membership(host),
+        "vlan_port_types": get_vlan_port_types(host),
     }
     return render_template("network/scan.html", device=device, data=data)

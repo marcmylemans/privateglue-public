@@ -178,8 +178,29 @@ def view_device(id):
     linked_notes = get_notes_linked_to_device(device.id)
     credentials = device.credentials  # ✅ FIXED here
 
-    return render_template("devices/view.html", device=device, linked_notes=linked_notes, credentials=credentials)
+    # --- SNMP support for eligible device types ---
+    SNMP_TYPES = {"switch", "router", "accesspoint", "firewall"}
+    snmp_available = False
+    snmp_error = None
+    if device.device_type and device.device_type.lower() in SNMP_TYPES and device.ip_address:
+        try:
+            from backend.utils.snmp import snmp_get
+            sys_descr = snmp_get(device.ip_address, "1.3.6.1.2.1.1.1.0")
+            sys_uptime = snmp_get(device.ip_address, "1.3.6.1.2.1.1.3.0")
+            if sys_descr or sys_uptime:
+                snmp_available = True
+        except Exception as e:
+            snmp_error = str(e)
 
+    return render_template(
+        "devices/view.html",
+        device=device,
+        linked_notes=linked_notes,
+        credentials=credentials,
+        snmp_available=snmp_available,
+        snmp_error=snmp_error,
+        SNMP_TYPES=SNMP_TYPES
+    )
 
 
 @devices_bp.route("/devices/<int:id>/credentials/add", methods=["GET", "POST"])

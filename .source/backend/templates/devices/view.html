@@ -34,12 +34,22 @@
     </div>
   {% endif %}
 
-  {% if device.device_type.lower() == 'switch' %}
-  <a href="{{ url_for('network.scan_device', device_id=device.id) }}"
-     class="btn btn-sm btn-primary">
-    Fetch Switch Info
-  </a>
-{% endif %}
+  {% set eligible_types = ['switch', 'router', 'accesspoint', 'firewall'] %}
+  {% if device.device_type and device.device_type.lower() in eligible_types %}
+    {% if snmp_available %}
+      <a href="{{ url_for('network.scan_device', device_id=device.id) }}"
+         class="btn btn-sm btn-primary mb-3">
+        Fetch SNMP Info
+      </a>
+    {% else %}
+      <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>
+          SNMP is not enabled or not responding for this device. If this device supports SNMP, please refer to the manufacturer's manual to enable it.
+        </div>
+      </div>
+    {% endif %}
+  {% endif %}
 
   <!-- Device Info Card -->
   <div class="card mb-4">

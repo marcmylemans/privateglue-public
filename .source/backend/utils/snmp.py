@@ -51,23 +51,42 @@ def get_interface_table(host: str):
     """
     Fetch interface names (ifDescr) and statuses (ifOperStatus), then return:
       [ { 'index': '1', 'name': 'Gig1/0/1', 'status': 1 }, … ]
+    Excludes VLAN, loopback, CPU, Link Aggregate, DEFAULT_VLAN, and other non-physical interfaces by name or index.
+    Dynamically includes only interfaces that look like real physical ports based on their name (e.g. containing 'port', 'gigabit', 'eth', or 'ge'),
+    or if the name is just a number (to support Aruba and similar switches).
     """
     # Walk ifDescr
     names = {}
     for oid, val in snmp_walk(host, ".1.3.6.1.2.1.2.2.1.2"):
         idx = oid.rsplit(".", 1)[-1]
-        names[idx] = val.decode(errors="ignore") if isinstance(val, (bytes, bytearray)) else str(val)
+        name = val.decode(errors="ignore") if isinstance(val, (bytes, bytearray)) else str(val)
+        names[idx] = name
 
     # Walk ifOperStatus
     statuses = {}
     for oid, val in snmp_walk(host, "1.3.6.1.2.1.2.2.1.8"):
         idx = oid.rsplit(".", 1)[-1]
-        # val may be int or bytes
         statuses[idx] = val if isinstance(val, int) else int.from_bytes(val, "big")
 
-    # Build a sorted list
+    # Build a sorted list, filtering out non-physical interfaces
     table = []
     for idx in sorted(names.keys(), key=int):
+        name = names[idx]
+        lname = name.lower()
+        # Heuristic: include if name looks like a real port OR is just a number (Aruba)
+        is_physical = (
+            name.isdigit() or
+            ("port" in lname or "gigabit" in lname or "eth" in lname or "ge" in lname)
+        ) and not (
+            lname.startswith("vlan") or
+            "loopback" in lname or
+            "cpu" in lname or
+            "aggregate" in lname or
+            lname == "default_vlan" or
+            (name.isupper() and not name.startswith("Port"))
+        )
+        if not is_physical:
+            continue
         table.append({
             "index":  idx,
             "name":   names[idx],
@@ -112,3 +131,30 @@ def get_vlan_membership(host: str):
         ports = [i+1 for i, bit in enumerate(bits) if bit == "1"]
         memb[vid] = ports
     return memb
+
+def get_vlan_port_types(host):
+    """
+    Returns { vlan_id: { 'tagged': [port_index], 'untagged': [port_index] } }
+    Untagged = port's PVID matches VLAN ID; Tagged = port is member but PVID != VLAN ID
+    Only includes ports that are real physical interfaces (as determined by get_interface_table).
+    """
+    # Get set of real physical port indices
+    physical_ports = set(iface['index'] for iface in get_interface_table(host))
+    vlan_members = get_vlan_membership(host)  # {vlan_id: [port_index, ...]}
+    pvids = get_port_pvid(host)               # {port_index: pvid}
+    result = {}
+    for vlan_id, ports in vlan_members.items():
+        tagged = []
+        untagged = []
+        for port in ports:
+            if str(port) not in physical_ports:
+                continue  # skip non-physical ports
+            if pvids.get(port) == vlan_id:
+                untagged.append(port)
+            else:
+                tagged.append(port)
+        result[vlan_id] = {
+            "tagged": tagged,
+            "untagged": untagged,
+        }
+    return result

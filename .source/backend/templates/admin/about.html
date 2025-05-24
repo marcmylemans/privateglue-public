@@ -14,7 +14,7 @@
               <td>
                 {% if key == 'API Key for Probe' %}
                   <span id="probeApiKey">{{ value }}</span>
-                  <button class="btn btn-sm btn-outline-secondary ms-2" onclick="navigator.clipboard.writeText(document.getElementById('probeApiKey').innerText)">Copy</button>
+                  <button class="btn btn-sm btn-outline-secondary ms-2" type="button" onclick="copyProbeApiKey()">Copy</button>
                 {% else %}
                   {{ value }}
                 {% endif %}
@@ -30,4 +30,41 @@
     </div>
   </div>
 </div>
+<script>
+function copyProbeApiKey() {
+  const el = document.getElementById('probeApiKey');
+  if (!el) return;
+  const text = el.innerText;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => showCopyAlert()).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+function fallbackCopy(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    showCopyAlert();
+  } catch (err) {
+    alert('Copy failed: ' + err);
+  }
+  document.body.removeChild(textarea);
+}
+function showCopyAlert() {
+  let alert = document.getElementById('copyAlert');
+  if (!alert) {
+    alert = document.createElement('div');
+    alert.id = 'copyAlert';
+    alert.className = 'alert alert-success mt-2';
+    alert.innerText = 'Copied!';
+    document.getElementById('probeApiKey').parentElement.appendChild(alert);
+  }
+  alert.classList.remove('d-none');
+  setTimeout(() => alert.classList.add('d-none'), 1500);
+}
+</script>
 {% endblock %}
