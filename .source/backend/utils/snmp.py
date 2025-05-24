@@ -22,13 +22,28 @@ def snmp_get(host: str, oid: str):
     return None
 
 def snmp_walk(host: str, oid: str):
+    import types
+    async def walk_all(wrapper, oid):
+        results = []
+        async for vb in wrapper.walk(oid):
+            results.append(vb)
+        return results
+
     for cred_cls in (V2C, V1):
         wrapper = _make_wrapper(host, cred_cls(COMMUNITY))
         try:
-            for vb in asyncio.run(wrapper.walk(oid)):
-                yield vb.oid, vb.pyvalue
-            return
-        except Exception:
+            print(f"[DEBUG] Walking OID {oid} with {cred_cls.__name__}")
+            results = asyncio.run(walk_all(wrapper, oid))
+            found = False
+            for vb in results:
+                # Use vb.value instead of vb.pyvalue
+                print(f"[DEBUG] OID: {vb.oid}, Value: {vb.value}")
+                found = True
+                yield vb.oid, vb.value
+            if found:
+                return
+        except Exception as e:
+            print(f"[DEBUG] Exception in snmp_walk: {e}")
             continue
     return
 
