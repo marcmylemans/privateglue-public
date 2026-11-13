@@ -1,38 +1,82 @@
 {% extends 'base.html' %}
-{% block title %}Search - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% set active_nav = 'search' %}
+{% block title %}{% if query %}“{{ query }}” · {% endif %}Search · {{ APP_NAME }}{% endblock %}
+
 {% block content %}
-
-<h2>Search Results{% if query %} for "{{ query }}"{% endif %}</h2>
-
 {% if not query %}
-  <p>Type a search term in the box above to begin.</p>
+  {{ ui.page_header('Search', 'Find devices, notes and credentials.', icon='search') }}
+  <div class="panel">
+    {{ ui.empty_state('search', 'What are you looking for?', 'Search by hostname, IP, MAC, OS, location, serial number, credential title or username, note title, tag or note text. Press / anywhere to jump to search.') }}
+  </div>
 {% else %}
-  {% if not devices and not notes %}
-    <p>No results found.</p>
+  {{ ui.page_header('Results for “' ~ query ~ '”', (total ~ ' result' ~ ('' if total == 1 else 's')), icon='search') }}
+
+  {% if total == 0 %}
+    <div class="panel">
+      {% call ui.empty_state('emoji-neutral', 'Nothing found for “' ~ query ~ '”', 'Check the spelling or try part of a hostname, IP address or tag.') %}
+        {% if can_edit %}
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+          <a href="{{ url_for('devices.add_device') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a device</a>
+          <a href="{{ url_for('notes.create_note') }}" class="btn btn-outline-secondary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Write a note</a>
+        </div>
+        {% endif %}
+      {% endcall %}
+    </div>
   {% endif %}
 
   {% if devices %}
-    <h4>Devices</h4>
-    <ul class="list-group mb-4">
+  <h2 class="search-group-title"><i class="bi bi-hdd-network" aria-hidden="true"></i> Devices <span class="count-pill">{{ devices|length }}</span></h2>
+  <div class="panel">
+    <ul class="item-list">
       {% for device in devices %}
-        <li class="list-group-item">
-          <a href="{{ url_for('devices.edit_device', id=device.id) }}">{{ device.hostname }}</a>
-          <small class="text-muted">({{ device.ip_address }})</small>
-        </li>
+      <li>
+        <span class="item-icon"><i class="bi bi-{{ device.device_type | device_icon }}" aria-hidden="true"></i></span>
+        <a class="item-main item-link" href="{{ url_for('devices.view_device', id=device.id) }}">
+          <span class="item-title">{{ device.hostname | highlight(query) }}</span>
+          <span class="item-meta">
+            {% if device.ip_address %}<span class="mono">{{ device.ip_address | highlight(query) }}</span> · {% endif %}{{ device.device_type or 'No type' }}{% if device.operating_system %} · {{ device.operating_system | highlight(query) }}{% endif %}{% if device.location %} · {{ device.location | highlight(query) }}{% endif %}
+          </span>
+        </a>
+      </li>
       {% endfor %}
     </ul>
+  </div>
   {% endif %}
 
   {% if notes %}
-    <h4>Notes</h4>
-    <ul class="list-group">
+  <h2 class="search-group-title"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes <span class="count-pill">{{ notes|length }}</span></h2>
+  <div class="panel">
+    <ul class="item-list">
       {% for note in notes %}
-        <li class="list-group-item">
-          <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note }}</a>
-        </li>
+      <li>
+        <span class="item-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+        <a class="item-main item-link" href="{{ url_for('notes.view_note', filename=note.filename) }}">
+          <span class="item-title">{{ note.filename | note_title | highlight(query) }}</span>
+          <span class="item-meta" style="white-space: normal">{{ note.snippet | highlight(query) }}</span>
+        </a>
+        {% if note.tags %}<span class="chip-list d-none d-md-flex">{% for tag in note.tags[:3] %}<span class="chip chip-tag">#{{ tag | highlight(query) }}</span>{% endfor %}</span>{% endif %}
+      </li>
       {% endfor %}
     </ul>
+  </div>
+  {% endif %}
+
+  {% if credentials %}
+  <h2 class="search-group-title"><i class="bi bi-key" aria-hidden="true"></i> Credentials <span class="count-pill">{{ credentials|length }}</span></h2>
+  <div class="panel">
+    <ul class="item-list">
+      {% for cred in credentials %}
+      <li>
+        <span class="item-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+        <a class="item-main item-link" href="{{ url_for('credentials.view_credential', id=cred.id) }}">
+          <span class="item-title">{{ cred.title | highlight(query) }}</span>
+          <span class="item-meta mono">{{ (cred.username or 'No username') | highlight(query) }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
 {% endif %}
-
 {% endblock %}

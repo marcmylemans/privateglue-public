@@ -1,9 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Page Not Found{% endblock %}
+{% block title %}Page not found · {{ APP_NAME }}{% endblock %}
 {% block content %}
-<div class="container text-center mt-5">
-  <h1 class="display-4">404</h1>
-  <p class="lead">Oops! The page you're looking for doesn’t exist.</p>
-  <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Dashboard</a>
+<div class="error-page{{ ' bare-card wide' if not current_user.is_authenticated }}">
+  <div class="error-code" aria-hidden="true">404</div>
+  <h1 class="h3 mt-3 mb-2">Page not found</h1>
+  <p class="text-body-secondary mb-4">The page or item you're looking for doesn't exist, or it has been deleted.</p>
+  <div class="d-flex flex-wrap justify-content-center gap-2">
+    <a href="{{ url_for('index') }}" class="btn btn-primary"><i class="bi bi-house" aria-hidden="true"></i> Go to dashboard</a>
+    <button type="button" class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Go back</button>
+  </div>
 </div>
 {% endblock %}

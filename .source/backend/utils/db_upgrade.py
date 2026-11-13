@@ -13,11 +13,14 @@ def check_and_upgrade_database():
          conn = sqlite3.connect(db_path)
          cursor = conn.cursor()
 
-         # Existing User table upgrade
+         # Existing User table upgrade. On a brand-new (empty) database the tables don't
+         # exist yet: db.create_all() creates them with every column, so skip the upgrade.
          cursor.execute("PRAGMA table_info(user);")
          columns = [row[1] for row in cursor.fetchall()]
 
-         if "force_password_reset" not in columns:
+         if not columns:
+             print("User table does not exist yet. Skipping upgrade.")
+         elif "force_password_reset" not in columns:
              print("Adding force_password_reset column to User table...")
              cursor.execute(
                  "ALTER TABLE user ADD COLUMN force_password_reset BOOLEAN DEFAULT 0;"
@@ -30,6 +33,10 @@ def check_and_upgrade_database():
          # Upgrade Device table with new columns
          cursor.execute("PRAGMA table_info(device);")
          dev_columns = [row[1] for row in cursor.fetchall()]
+         if not dev_columns:
+             print("Device table does not exist yet. Skipping upgrade.")
+             conn.close()
+             return
 
          # Columns to add: definition includes SQLite type and defaults
          new_columns = {

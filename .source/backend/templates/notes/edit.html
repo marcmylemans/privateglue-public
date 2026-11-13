@@ -1,69 +1,99 @@
 {% extends "base.html" %}
-{% block title %}{{ "Create Note" if create_mode else "Edit Note" }}{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}{{ 'New note' if create_mode else 'Edit ' ~ (filename | note_title) }} · {{ APP_NAME }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/highlight/github.min.css') }}" data-hl-theme="light">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/highlight/github-dark.min.css') }}" data-hl-theme="dark">
+{% endblock %}
+
+{% block breadcrumb %}
+  {% if create_mode %}
+    {{ ui.breadcrumbs([('Notes', url_for('notes.list_notes')), ('New note', None)]) }}
+  {% else %}
+    {{ ui.breadcrumbs([('Notes', url_for('notes.list_notes')), (filename | note_title, url_for('notes.view_note', filename=filename)), ('Edit', None)]) }}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">{{ "Create a New Note" if create_mode else "Edit Note" }}</h2>
+<form method="post" id="noteForm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-  <form method="post">
-    <div class="row">
-      <div class="col-md-6">
-        {% if create_mode %}
-        <div class="mb-3">
-          <label for="filename" class="form-label">Filename</label>
-          <input type="text" class="form-control" name="filename" id="filename" placeholder="example-note" required>
+  {% call ui.page_header('New note' if create_mode else 'Edit ' ~ (filename | note_title), icon='pencil-square') %}
+    <a href="{{ url_for('notes.list_notes') if create_mode else url_for('notes.view_note', filename=filename) }}" class="btn btn-outline-secondary">Cancel</a>
+    <button type="submit" class="btn btn-primary" title="Save (Ctrl+S)"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ 'Create note' if create_mode else 'Save' }}</button>
+  {% endcall %}
+
+  <div class="row g-3">
+    <div class="col-xl-9">
+      {% if create_mode %}
+      <div class="panel panel-body">
+        <label for="filename" class="form-label">Title</label>
+        <input type="text" class="form-control form-control-lg" name="filename" id="filename" required maxlength="120"
+               value="{{ filename | note_title }}" placeholder="e.g. proxmox-cluster-setup" autofocus aria-describedby="filenameHelp" autocomplete="off">
+        <div id="filenameHelp" class="form-text">Also used as the file name. Letters, numbers, spaces, dashes and underscores.</div>
+      </div>
+      {% endif %}
+
+      <div class="panel">
+        <div class="editor-tabs nav nav-pills p-2 gap-1 border-bottom" role="tablist" aria-label="Editor view">
+          <button type="button" class="nav-link active" data-editor-mode="write" role="tab" aria-selected="true"><i class="bi bi-pencil" aria-hidden="true"></i> Write</button>
+          <button type="button" class="nav-link" data-editor-mode="preview" role="tab" aria-selected="false"><i class="bi bi-eye" aria-hidden="true"></i> Preview</button>
         </div>
-        {% endif %}
-
-        <div class="mb-3">
-          <label for="tags" class="form-label">Tags (comma-separated)</label>
-          <input type="text" class="form-control" name="tags" id="tags" value="{{ tags }}">
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Linked Devices</label>
-          <div class="border rounded p-2 bg-body-tertiary" style="max-height: 200px; overflow-y: auto;">
-            {% for device in all_devices %}
-              <div class="form-check">
-                <input class="form-check-input" type="checkbox" name="devices" value="{{ device.id }}"
-                  id="device-{{ device.id }}"
-                  {% if device.id in linked_device_ids %}checked{% endif %}>
-                <label class="form-check-label" for="device-{{ device.id }}">
-                  {{ device.hostname }} ({{ device.ip_address }})
-                </label>
-              </div>
-            {% endfor %}
+        <div class="editor-grid" data-mode="write">
+          <div class="editor-pane editor-pane-write">
+            <div class="editor-pane-label"><label for="content" class="m-0">Markdown</label><span class="kbd-hint">Ctrl+S to save</span></div>
+            <textarea class="form-control editor-textarea" name="content" id="content" spellcheck="true"
+                      placeholder="# Title&#10;&#10;Write in Markdown. Code blocks, tables and lists are supported."
+                      data-preview="#preview" data-preview-url="{{ url_for('notes.preview_note') }}" data-preview-status="#previewStatus">{{ content }}</textarea>
+          </div>
+          <div class="editor-pane editor-pane-preview">
+            <div class="editor-pane-label"><span>Preview</span><span id="previewStatus" class="kbd-hint" aria-live="polite"></span></div>
+            <div id="preview" class="editor-preview markdown-body" aria-label="Preview"></div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="col-md-6">
-        <div class="mb-3">
-          <label for="content" class="form-label">Markdown Content</label>
-          <textarea class="form-control" name="content" id="content" rows="15" oninput="updatePreview()">{{ content }}</textarea>
+    <div class="col-xl-3">
+      <div class="panel">
+        <div class="panel-body">
+          <label for="tags" class="form-label">Tags</label>
+          <input type="text" class="form-control" name="tags" id="tags" value="{{ tags }}" placeholder="network, proxmox" autocomplete="off" aria-describedby="tagsHelp">
+          <div id="tagsHelp" class="form-text">Separate tags with commas.</div>
+          {% if all_tags %}
+          <div class="tag-suggestions" aria-label="Existing tags">
+            {% for tag in all_tags %}<button type="button" class="chip chip-tag" data-add-tag="{{ tag }}" aria-label="Add tag {{ tag }}">+ {{ tag }}</button>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="panel-body border-top">
+          <label class="form-label" for="noteDevices-filter">Linked devices</label>
+          {{ ui.device_checklist(all_devices, linked_device_ids, id='noteDevices') }}
         </div>
       </div>
     </div>
+  </div>
+</form>
+{% endblock %}
 
-    <div class="mt-4">
-      <label class="form-label">Live Preview</label>
-      <div id="preview" class="border rounded p-3 markdown-body bg-body-tertiary text-body" style="min-height: 200px;"></div>
-    </div>
-
-    <div class="mt-4 d-flex gap-2">
-      <button type="submit" class="btn btn-success">{{ "Create Note" if create_mode else "Save Changes" }}</button>
-      <a href="{{ url_for('notes.list_notes') }}" class="btn btn-outline-secondary">Cancel</a>
-    </div>
-  </form>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/highlight/highlight.min.js') }}"></script>
 <script>
-  function updatePreview() {
-    const raw = document.getElementById("content").value;
-    document.getElementById("preview").innerHTML = marked.parse(raw);
-  }
-
-  document.addEventListener("DOMContentLoaded", updatePreview);
+  (function () {
+    var input = document.getElementById('tags');
+    function current() { return input.value.split(',').map(function (t) { return t.trim(); }).filter(Boolean); }
+    function sync() {
+      var have = current().map(function (t) { return t.toLowerCase(); });
+      document.querySelectorAll('[data-add-tag]').forEach(function (b) { b.hidden = have.indexOf(b.getAttribute('data-add-tag').toLowerCase()) !== -1; });
+    }
+    document.querySelectorAll('[data-add-tag]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tags = current(); tags.push(btn.getAttribute('data-add-tag'));
+        input.value = tags.join(', ');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+    input.addEventListener('input', sync); sync();
+  })();
 </script>
 {% endblock %}

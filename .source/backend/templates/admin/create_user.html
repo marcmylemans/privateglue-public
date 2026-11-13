@@ -1,134 +1,53 @@
 {% extends "base.html" %}
-{% block title %}Add User - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Add user · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Users', url_for('admin.list_users')), ('Add user', None)]) }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Add New User</h2>
-  <form method="POST">
+<div class="narrow-page">
+{{ ui.page_header('Add user', 'They can change their password later from their profile.', icon='person-plus') }}
+
+<form method="POST" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-section">
     <div class="mb-3">
       <label for="username" class="form-label">Username</label>
-      <input type="text" class="form-control" name="username" id="username" required placeholder="Enter a username">
-      <div id="usernameFeedback" class="form-text mt-1"></div>
+      <input type="text" class="form-control" name="username" id="username" required autocomplete="off" autocapitalize="none" spellcheck="false" autofocus
+             data-username-check="#usernameFeedback" aria-describedby="usernameFeedback">
+      <div id="usernameFeedback" class="form-text" aria-live="polite"></div>
     </div>
-
     <div class="mb-3">
       <label for="password" class="form-label">Password</label>
-      <input type="password" class="form-control" name="password" id="password" required placeholder="Create a password">
-      <div id="passwordFeedback" class="form-text mt-1">Password must be at least 8 characters.</div>
+      <div class="input-group">
+        <input type="password" class="form-control" name="password" id="password" required minlength="8" autocomplete="new-password"
+               data-pw-strength="#passwordFeedback" aria-describedby="passwordFeedback">
+        <button type="button" class="btn btn-outline-secondary" data-pw-toggle="#password" aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-outline-secondary" data-pw-generate="#password" aria-label="Generate password" title="Generate"><i class="bi bi-magic" aria-hidden="true"></i></button>
+      </div>
+      {{ ui.password_feedback('passwordFeedback') }}
     </div>
+    <div>
+      <label for="confirm_password" class="form-label">Confirm password</label>
+      <input type="password" class="form-control" name="confirm_password" id="confirm_password" required autocomplete="new-password"
+             data-pw-match="#password" data-pw-match-feedback="#confirmFeedback" aria-describedby="confirmFeedback">
+      <div id="confirmFeedback" class="form-text" aria-live="polite"></div>
+    </div>
+  </div>
 
-    <div class="mb-3">
-      <label for="confirm_password" class="form-label">Confirm Password</label>
-      <input type="password" class="form-control" name="confirm_password" id="confirm_password" required placeholder="Confirm password">
-      <div id="confirmFeedback" class="form-text mt-1"></div>
+  <fieldset class="form-section">
+    <legend class="form-label fs-6">Role</legend>
+    {% for value, desc in [('readonly', 'Can view everything, including passwords, but change nothing.'), ('editor', 'Can add and edit devices, notes and credentials.'), ('admin', 'Full access, including users, deletes and backups.')] %}
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="radio" name="role" id="role-{{ value }}" value="{{ value }}" {% if value == 'readonly' %}checked{% endif %}>
+      <label class="form-check-label" for="role-{{ value }}">{{ ui.role_badge(value) }} <span class="small text-body-secondary ms-1">{{ desc }}</span></label>
     </div>
+    {% endfor %}
+  </fieldset>
 
-    <div class="mb-3">
-      <label for="role" class="form-label">Role</label>
-      <select class="form-select" name="role" id="role">
-        <option value="readonly">Read Only</option>
-        <option value="editor">Editor</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center">
-      <button type="submit" class="btn btn-success">Create User</button>
-      <a href="{{ url_for('admin.list_users') }}" class="btn btn-secondary">Cancel</a>
-    </div>
-  </form>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Create user</button>
+    <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 </div>
-
-<script>
-  const username = document.getElementById("username");
-  const usernameFeedback = document.getElementById("usernameFeedback");
-
-  let usernameTimeout = null;
-  username.addEventListener("input", () => {
-    clearTimeout(usernameTimeout);
-
-    const value = username.value.trim();
-    if (value.length === 0) {
-      username.classList.remove("is-valid", "is-invalid");
-      usernameFeedback.textContent = "";
-      return;
-    }
-
-    usernameTimeout = setTimeout(() => {
-      fetch(`/check_username?username=${encodeURIComponent(value)}`)
-        .then(response => response.json())
-        .then(data => {
-          username.classList.remove("is-valid", "is-invalid");
-          usernameFeedback.classList.remove("text-success", "text-danger");
-
-          if (data.exists) {
-            username.classList.add("is-invalid");
-            usernameFeedback.classList.add("text-danger");
-            usernameFeedback.textContent = "Username is already taken ❌";
-          } else {
-            username.classList.add("is-valid");
-            usernameFeedback.classList.add("text-success");
-            usernameFeedback.textContent = "Username is available ✅";
-          }
-        });
-    }, 300);
-  });
-
-  const password = document.getElementById("password");
-  const confirm = document.getElementById("confirm_password");
-  const passwordFeedback = document.getElementById("passwordFeedback");
-  const confirmFeedback = document.getElementById("confirmFeedback");
-
-  function updatePasswordStrength() {
-    const len = password.value.length;
-
-    password.classList.remove("is-invalid", "is-warning", "is-valid");
-    passwordFeedback.classList.remove("text-danger", "text-warning", "text-success");
-
-    if (len === 0) {
-      passwordFeedback.textContent = "Password must be at least 8 characters.";
-      return;
-    }
-
-    if (len < 8) {
-      password.classList.add("is-invalid");
-      passwordFeedback.classList.add("text-danger");
-      passwordFeedback.textContent = "Too short — must be at least 8 characters.";
-    } else if (len === 8 || len === 9) {
-      password.classList.add("is-warning");
-      passwordFeedback.classList.add("text-warning");
-      passwordFeedback.textContent = "Okay, but longer is better.";
-    } else {
-      password.classList.add("is-valid");
-      passwordFeedback.classList.add("text-success");
-      passwordFeedback.textContent = "Strong password ✅";
-    }
-  }
-
-  function updatePasswordMatch() {
-    if (confirm.value === "") {
-      confirmFeedback.textContent = "";
-      return;
-    }
-
-    if (confirm.value !== password.value) {
-      confirm.classList.add("is-invalid");
-      confirmFeedback.classList.add("text-danger");
-      confirmFeedback.textContent = "Passwords do not match.";
-    } else {
-      confirm.classList.remove("is-invalid");
-      confirm.classList.add("is-valid");
-      confirmFeedback.classList.remove("text-danger");
-      confirmFeedback.classList.add("text-success");
-      confirmFeedback.textContent = "Passwords match ✅";
-    }
-  }
-
-  password.addEventListener("input", () => {
-    updatePasswordStrength();
-    updatePasswordMatch();
-  });
-
-  confirm.addEventListener("input", updatePasswordMatch);
-</script>
 {% endblock %}

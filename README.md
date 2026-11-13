@@ -1,75 +1,77 @@
 # PrivateGlue
 
-**PrivateGlue** is a simple, self-hosted web app for linking devices, notes, and credentials, helping IT professionals and homelabbers keep everything organized and secure.
+**PrivateGlue** is a self-hosted web app for documenting devices, notes and credentials, so homelabbers and IT professionals keep everything about their environment in one place they control.
 
-Ideal for:
-- Freelancers and consultants juggling multiple client systems
-- Home lab enthusiasts documenting hardware and configurations
-- Small businesses needing internal IT asset tracking
-- Anyone looking to store credentials privately with encryption
+Good for:
+- Homelab documentation: servers, VMs, switches, VLANs, services
+- Freelancers and consultants managing client environments
+- Small IT teams building a shared, private knowledge base
 
----
+<!-- This file is maintained in the private source repo (public/README.md) and synced on each release. -->
 
 ## Features
 
-- **Notes with Markdown** and device linking
-- **Password manager** with encryption and copy-to-clipboard
-- **Device inventory** with tags for location and type
-- **Link notes and credentials to devices**
-- **Dark Mode Support**
-- Built with Flask, SQLite, Bootstrap 5
+- **Device inventory**: hostname, IP, MAC, OS, location and serial numbers, with filtering and CSV import
+- **Markdown notes** with live preview, code highlighting, tags and device links
+- **Encrypted credentials**, linked to devices, copied to the clipboard without showing them on screen
+- **Search** across devices, notes (including their text) and credentials
+- **Proxmox VE and SNMP**: live node, VM, container and storage details; switch interfaces and VLANs
+- **Users and roles** (admin, editor, read-only), one-click backups and restore
+- Light, dark and system themes; works fully offline (no CDN or third-party calls)
 
----
+Screenshots: [privateglue.app](https://privateglue.app/#tour)
 
-## Screenshots
+## Quick start
 
-[Screenshots.md](.source/documentation/Screenshots.md)
-
-
----
-
-## Getting Started
-
-[Live DEMO version](https://privateglue.demo.mylemans.online/)
-
-1. Clone this repository.
-2. Run using Docker:
+You need Docker with Docker Compose.
 
 ```bash
-git clone https://github.com/marcmylemans/privateglue-public.git
-cd privateglue-public
-docker-compose up
+mkdir privateglue && cd privateglue
+curl -fsSL https://raw.githubusercontent.com/marcmylemans/privateglue-public/main/docker-compose.yml -o docker-compose.yml
+echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+docker compose up -d
 ```
 
-3. Open `http://localhost:5000` and start documenting your gear!
+Open [http://localhost:5000](http://localhost:5000) and create your admin account, or restore a backup.
 
-More setup details coming soon...
+Using **Dockge** or **Portainer**? Paste `docker-compose.yml` as the stack and put `SECRET_KEY=...` in the stack's environment (`.env`). The compose file passes it into the container.
 
----
+### Settings (`.env`)
 
-## Use Case Examples
+| Variable | Required | Default | What it does |
+|---|---|---|---|
+| `SECRET_KEY` | yes | | Signs login sessions. Generate with `openssl rand -hex 32`. Keep it stable. |
+| `PRIVATEGLUE_TAG` | no | `latest` | Image tag: `latest` (releases), a version like `0.7.0`, or `edge` (newest `main`) |
+| `PRIVATEGLUE_PORT` | no | `5000` | Port on the host |
+| `PUID` / `PGID` | no | `1000` | User and group that own the data folders |
 
-- Save login credentials per server/router/switch
-- Track device locations and types (lab, office, rack)
-- Write notes about setup instructions or recovery steps
-- Share selected notes as public read-only docs (coming soon!)
-- Backup your documentation easily (planned for future)
+### Data and backups
 
----
+| Path | Contents |
+|---|---|
+| `./data` | SQLite database |
+| `./notes` | Markdown notes |
+| `./backups` | Backups created from the app |
+| `secretkey` volume | Encryption key for stored credentials |
+
+Without the encryption key, stored credentials can't be decrypted. The easiest safe backup is **Create backup** in the account menu: the zip contains the database, the key and all notes, and a fresh install can restore it.
+
+### Updating
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Upgrading from an older version: the app now runs as an unprivileged user and fixes ownership of the data folders on start, so existing installs keep working. Make sure `.env` has a `SECRET_KEY` and remove any `curl` healthcheck from an old compose file (the image has its own).
 
 ## Changelog
- 
-For a complete list of changes and versions, check out the [CHANGELOG.md](.source/documentation/CHANGELOG.md).
 
----
+See [CHANGELOG.md](.source/documentation/CHANGELOG.md) for all changes and versions.
 
-## ❤️ Support
+## Support
 
-If you like this project, consider [starring ⭐ it on GitHub](https://github.com/marcmylemans/privateglue-public)  
-For feedback, suggestions, or bug reports, feel free to open an issue.
+If you like this project, consider [starring it on GitHub](https://github.com/marcmylemans/privateglue-public). For feedback, suggestions or bug reports, open an issue.
 
----
+## License
 
-## 📜 License
-
-MIT — free for personal and commercial use.
+MIT: free for personal and commercial use. See [LICENSE](LICENSE).

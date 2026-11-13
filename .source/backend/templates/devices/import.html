@@ -1,23 +1,30 @@
 {% extends 'base.html' %}
-{% block title %}Import Devices - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Import devices · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), ('Import', None)]) }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Import Devices</h2>
+<div class="narrow-page">
+{{ ui.page_header('Import devices', 'Bring in an existing inventory from a spreadsheet.', icon='upload') }}
 
-  <div class="alert alert-info">
-    <strong>Step 1:</strong>
-    <a href="{{ url_for('devices.import_devices_template') }}">Download CSV template</a>
-    (contains only headers matching your Device fields).
+<form method="POST" enctype="multipart/form-data" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-section">
+    <h2 class="form-section-title"><span class="count-pill">1</span> Prepare a CSV file</h2>
+    <p class="form-section-desc mb-2">Use our template, or any CSV with a header row. If your column names differ, you'll map them in the next step.</p>
+    <a href="{{ url_for('devices.import_devices_template') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download" aria-hidden="true"></i> Download template</a>
+    <div class="small text-body-secondary mt-2">Columns: <span class="mono">hostname, ip_address, mac_address, device_type, operating_system, os_version, serial_number, license_key, location</span>. Only <span class="mono">hostname</span> is required.</div>
   </div>
-
-  <form method="POST" enctype="multipart/form-data">
-    <div class="mb-3">
-      <label for="csvfile" class="form-label">Step 2: Upload filled CSV</label>
-      <input type="file" class="form-control" id="csvfile" name="csvfile" accept=".csv" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Import</button>
-    <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary ms-2">Cancel</a>
-  </form>
+  <div class="form-section">
+    <h2 class="form-section-title"><span class="count-pill">2</span> Upload it</h2>
+    <label for="csvfile" class="form-label visually-hidden">CSV file</label>
+    <input type="file" class="form-control mt-2" id="csvfile" name="csvfile" accept=".csv,text/csv" required aria-describedby="csvHelp">
+    <div id="csvHelp" class="form-text">UTF-8, UTF-16 or Latin-1 encoded. Max 5 MB.</div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-upload" aria-hidden="true"></i> Upload and continue</button>
+    <a href="{{ url_for('devices.list_devices') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 </div>
 {% endblock %}

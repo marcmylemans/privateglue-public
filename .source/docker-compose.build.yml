@@ -1,0 +1,6 @@
+# Override for building the image from this source tree instead of pulling it:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+services:
+  privateglue:
+    image: privateglue:local
+    build: .

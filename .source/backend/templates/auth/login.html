@@ -1,57 +1,49 @@
 {% extends "base.html" %}
-{% block title %}Login - PrivateGlue{% endblock %}
+{% set bare_layout = true %}
+{% block title %}Sign in · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container-md mt-5" style="max-width: 500px;">
-  <div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-      <h2 class="mb-4 text-center">Welcome Back</h2>
-      <form method="POST">
-        {{ form.hidden_tag() }}
+<div class="bare-card">
+  <h1>Sign in</h1>
+  <p class="text-body-secondary mb-4">Welcome back. Enter your details to continue.</p>
 
-        <!-- Username -->
-        <div class="mb-3">
-          {{ form.username.label(class="form-label") }}
-          {{ form.username(class="form-control", placeholder="Enter your username") }}
-        </div>
+  {% if DEMO_MODE %}
+  <div class="alert alert-info small py-2" role="note"><i class="bi bi-info-circle" aria-hidden="true"></i><div>Demo credentials are filled in for you.</div></div>
+  {% endif %}
 
-        <!-- Password -->
-        <div class="mb-3">
-          {{ form.password.label(class="form-label") }}
-          {{ form.password(class="form-control", placeholder="Enter your password") }}
-        </div>
-
-        <!-- Remember Me -->
-        <div class="form-check mb-3">
-          {{ form.remember(class="form-check-input", id="remember") }}
-          <label class="form-check-label" for="remember">Remember Me</label>
-        </div>
-
-        <!-- Submit -->
-        <div class="d-grid mb-3">
-          {{ form.submit(class="btn btn-primary") }}
-        </div>
-
-        <!-- Register Link -->
-        <div class="text-center">
-          <a href="{{ url_for('auth.register') }}" class="link-secondary">Don't have an account?</a>
-        </div>
-      </form>
+  <form method="POST" novalidate>
+    {{ form.hidden_tag() }}
+    <div class="mb-3">
+      {{ form.username.label(class="form-label") }}
+      {{ form.username(class="form-control" ~ (' is-invalid' if form.username.errors else ''), placeholder="Your username", autocomplete="username", autofocus=true, required=true, autocapitalize="none", spellcheck="false") }}
+      {% for e in form.username.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
     </div>
-  </div>
+    <div class="mb-3">
+      {{ form.password.label(class="form-label") }}
+      <div class="input-group">
+        {{ form.password(class="form-control" ~ (' is-invalid' if form.password.errors else ''), placeholder="Your password", autocomplete="current-password", required=true) }}
+        <button type="button" class="btn btn-outline-secondary" data-pw-toggle="#password" aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+      </div>
+      {% for e in form.password.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="form-check mb-4">
+      {{ form.remember(class="form-check-input", id="remember") }}
+      <label class="form-check-label" for="remember">Keep me signed in</label>
+    </div>
+    <button type="submit" class="btn btn-primary w-100 py-2">Sign in</button>
+  </form>
+
+  <p class="text-center small text-body-secondary mt-4 mb-0">
+    No account yet? <a href="{{ url_for('auth.register') }}">Request access</a>
+  </p>
 </div>
 
 {% if DEMO_MODE %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    const usernameField = document.getElementById("username");
-    const passwordField = document.getElementById("password");
-    if (usernameField && passwordField) {
-      usernameField.value = "demo";
-      passwordField.value = "privateglue";
-    }
+    var u = document.getElementById("username"), p = document.getElementById("password");
+    if (u && p) { u.value = "demo"; p.value = "privateglue"; }
   });
 </script>
 {% endif %}
-
 {% endblock %}

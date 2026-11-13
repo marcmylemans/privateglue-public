@@ -1,121 +1,167 @@
 {% extends 'base.html' %}
-{% block title %}{{ device.hostname }} - Device{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}{{ device.hostname }} · Devices · {{ APP_NAME }}{% endblock %}
+
+{% block breadcrumb %}{{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), (device.hostname, None)]) }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">{{ device.hostname }}</h2>
-    <div class="d-flex gap-2">
-      <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
-      <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-sm btn-outline-secondary">Clone</a>
-      <a href="{{ url_for('devices.list_devices') }}" class="btn btn-sm btn-outline-dark">Back</a>
-    </div>
-  </div>
+{% set subtitle %}{{ device.device_type | type_label or 'Device' }}{% if device.location %} · {{ device.location }}{% endif %}{% endset %}
+{% call ui.page_header(device.hostname, subtitle, icon=device.device_type | device_icon) %}
+  {% if can_edit %}
+    <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-outline-secondary"><i class="bi bi-copy" aria-hidden="true"></i> Duplicate</a>
+    <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-primary"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
+  {% endif %}
+{% endcall %}
 
-    <!-- Proxmox Auto-Detect and Fetch UI -->
-  {% if device.operating_system|lower in ['proxmox', 'proxmox ve'] %}
-    <div class="mb-4">
-      {% if not device.credentials %}
-        <div class="alert alert-warning d-flex align-items-center" role="alert">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>
-          <div>
-            Proxmox VE detected but no credentials linked.
-            <a href="{{ url_for('devices.add_credential', id=device.id) }}" class="alert-link">Add credentials</a> using the built‑in form to enable auto‑fetching of host details.
+<div class="row g-3">
+  <div class="col-xl-8">
+    <section class="panel" aria-labelledby="networkTitle">
+      <div class="panel-header"><h2 class="panel-title" id="networkTitle"><i class="bi bi-diagram-2" aria-hidden="true"></i> Network</h2></div>
+      <div class="panel-body">
+        <dl class="facts">
+          {{ ui.fact('Hostname', device.hostname, mono=True, copy=True) }}
+          {{ ui.fact('IP address', device.ip_address, mono=True, copy=True) }}
+          {{ ui.fact('MAC address', device.mac_address, mono=True, copy=True) }}
+        </dl>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="systemTitle">
+      <div class="panel-header"><h2 class="panel-title" id="systemTitle"><i class="bi bi-cpu" aria-hidden="true"></i> System &amp; asset</h2></div>
+      <div class="panel-body">
+        <dl class="facts">
+          {{ ui.fact('Type', device.device_type | type_label) }}
+          {{ ui.fact('Operating system', device.operating_system) }}
+          {{ ui.fact('OS version', device.os_version) }}
+          {{ ui.fact('Location', device.location) }}
+          {{ ui.fact('Serial number', device.serial_number, mono=True, copy=True) }}
+          {{ ui.fact('License key / asset tag', device.license_key, mono=True, copy=True, secret=True) }}
+        </dl>
+      </div>
+    </section>
+
+    {% if is_proxmox or snmp_eligible %}
+    <section class="panel" aria-labelledby="integrationsTitle">
+      <div class="panel-header"><h2 class="panel-title" id="integrationsTitle"><i class="bi bi-plug" aria-hidden="true"></i> Integrations</h2></div>
+      {% if is_proxmox %}
+      <div class="integration-row">
+        <span class="item-icon"><i class="bi bi-hdd-stack" aria-hidden="true"></i></span>
+        <div class="item-main">
+          <div class="fw-semibold">Proxmox VE</div>
+          {% if device.credentials %}
+            <div class="small text-body-secondary">Fetch live node, VM, container and storage details using the linked credential.</div>
+          {% else %}
+            <div class="small text-body-secondary">Link a credential to this device to fetch live host details.</div>
+          {% endif %}
+        </div>
+        {% if device.credentials %}
+          <a href="{{ url_for('devices.fetch_device_info', id=device.id) }}" class="btn btn-outline-primary btn-sm" data-loading-text="Fetching…"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Fetch details</a>
+        {% elif can_edit %}
+          <a href="{{ url_for('credentials.add_credential', device_id=device.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-key" aria-hidden="true"></i> Add credential</a>
+        {% endif %}
+      </div>
+      {% endif %}
+      {% if snmp_eligible %}
+      <div class="integration-row" id="snmpRow" data-status-url="{{ url_for('devices.snmp_status', id=device.id) }}">
+        <span class="item-icon"><i class="bi bi-broadcast" aria-hidden="true"></i></span>
+        <div class="item-main">
+          <div class="fw-semibold">SNMP <span class="status-dot ms-1" id="snmpDot" aria-hidden="true"></span></div>
+          <div class="small text-body-secondary" id="snmpText" aria-live="polite">
+            {% if device.ip_address %}Checking whether SNMP responds on {{ device.ip_address }}…{% else %}Add an IP address to use SNMP.{% endif %}
           </div>
         </div>
-      {% else %}
-        <div class="mb-3">
-          <a href="{{ url_for('devices.fetch_device_info', id=device.id) }}" 
-             class="btn btn-sm btn-outline-info">
-            Fetch Proxmox Details
-          </a>
-        </div>
-      {% endif %}
-    </div>
-  {% endif %}
-
-  {% set eligible_types = ['switch', 'router', 'accesspoint', 'firewall'] %}
-  {% if device.device_type and device.device_type.lower() in eligible_types %}
-    {% if snmp_available %}
-      <a href="{{ url_for('network.scan_device', device_id=device.id) }}"
-         class="btn btn-sm btn-primary mb-3">
-        Fetch SNMP Info
-      </a>
-    {% else %}
-      <div class="alert alert-warning d-flex align-items-center mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-        <div>
-          SNMP is not enabled or not responding for this device. If this device supports SNMP, please refer to the manufacturer's manual to enable it.
-        </div>
+        <a href="{{ url_for('network.scan_device', device_id=device.id) }}" class="btn btn-outline-primary btn-sm" id="snmpBtn" hidden><i class="bi bi-diagram-3" aria-hidden="true"></i> Interfaces &amp; VLANs</a>
       </div>
+      {% endif %}
+    </section>
     {% endif %}
-  {% endif %}
-
-  <!-- Device Info Card -->
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title">Device Info</h5>
-      <p class="mb-1"><strong>Hostname:</strong> {{ device.hostname }}</p>
-      <p class="mb-1"><strong>IP Address:</strong> {{ device.ip_address or "—" }}</p>
-      <p class="mb-1"><strong>MAC Address:</strong> {{ device.mac_address or "—" }}</p>
-      <p class="mb-1"><strong>Type:</strong> {{ device.device_type or "—" }}</p>
-      <p class="mb-1"><strong>Operating System:</strong> {{ device.operating_system or "—" }}</p>
-      <p class="mb-1"><strong>OS Version:</strong> {{ device.os_version or "—" }}</p>
-      <p class="mb-1"><strong>Serial Number:</strong> {{ device.serial_number or "—" }}</p>
-      <p class="mb-1"><strong>License Key:</strong> {{ device.license_key or "—" }}</p>
-      <p class="mb-1"><strong>Location:</strong> {{ device.location or "—" }}</p>
-    </div>
   </div>
 
-  <!-- Linked Credentials -->
-  {% if credentials %}
-    <h5 class="mb-3">Linked Credentials</h5>
-    <ul class="list-group mb-4">
-      {% for cred in credentials %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <a href="{{ url_for('credentials.view_credential', id=cred.id) }}">{{ cred.title }}</a>
-          <small class="text-muted">{{ cred.username or "No username" }}</small>
+  <div class="col-xl-4">
+    <section class="panel" aria-labelledby="credsTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="credsTitle"><i class="bi bi-key" aria-hidden="true"></i> Credentials <span class="count-pill">{{ credentials|length }}</span></h2>
+        {% if can_edit %}<a href="{{ url_for('credentials.add_credential', device_id=device.id) }}" class="small"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add</a>{% endif %}
+      </div>
+      {% if credentials %}
+      <ul class="item-list">
+        {% for cred in credentials %}
+        <li>
+          <span class="item-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+          <a class="item-main item-link" href="{{ url_for('credentials.view_credential', id=cred.id) }}">
+            <span class="item-title">{{ cred.title }}</span>
+            <span class="item-meta mono">{{ cred.username or 'No username' }}</span>
+          </a>
+          {% if cred.username %}{{ ui.copy_button(cred.username, 'Copy username for ' ~ cred.title) }}{% endif %}
         </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="panel-body text-body-secondary small">No credentials linked to this device.</div>
+      {% endif %}
+    </section>
 
-  <!-- Linked Notes -->
-  {% if linked_notes %}
-    <h5 class="mb-3">Linked Notes</h5>
-    <ul class="list-group">
-      {% for note in linked_notes %}
-        <li class="list-group-item">
-          <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note }}</a>
+    <section class="panel" aria-labelledby="notesTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="notesTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Notes <span class="count-pill">{{ linked_notes|length }}</span></h2>
+        {% if can_edit %}<a href="{{ url_for('notes.create_note', device_id=device.id) }}" class="small"><i class="bi bi-plus-lg" aria-hidden="true"></i> Write</a>{% endif %}
+      </div>
+      {% if linked_notes %}
+      <ul class="item-list">
+        {% for note in linked_notes %}
+        <li>
+          <span class="item-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+          <a class="item-main item-link" href="{{ url_for('notes.view_note', filename=note) }}"><span class="item-title">{{ note | note_title }}</span></a>
         </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="panel-body text-body-secondary small">No notes linked to this device.</div>
+      {% endif %}
+    </section>
+
+    {% if is_admin %}
+    <section class="panel panel-danger" aria-labelledby="dangerTitle">
+      <div class="panel-header"><h2 class="panel-title" id="dangerTitle"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Danger zone</h2></div>
+      <div class="panel-body">
+        <p class="small text-body-secondary">Deleting removes this device permanently. Linked credentials and notes are kept but lose the link.</p>
+        {{ ui.delete_button(url_for('devices.delete_device', id=device.id), "'" ~ device.hostname ~ "' will be permanently removed. Linked credentials and notes are kept.", 'Delete device', 'btn btn-outline-danger w-100', title='Delete device') }}
+      </div>
+    </section>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  {{ super() }}
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const btn = document.getElementById('fetchProxmoxBtn');
-      const spinner = document.getElementById('fetchSpinner');
-      const container = document.getElementById('proxmoxDetailsContainer');
-      if (btn) {
-        btn.addEventListener('click', async function() {
-          spinner.classList.remove('d-none');
-          btn.disabled = true;
-          const resp = await fetch(`{{ url_for('devices.fetch_device_info', id=device.id) }}`);
-          if (resp.ok) {
-            const html = await resp.text();
-            container.innerHTML = html;
-          } else {
-            container.innerHTML = '<div class="alert alert-danger">Error fetching details.</div>';
-          }
-          spinner.classList.add('d-none');
-          btn.disabled = false;
-        });
-      }
+<script>
+  (function () {
+    // "Fetch details" can take a few seconds: show progress instead of a frozen page.
+    document.querySelectorAll('[data-loading-text]').forEach(function (a) {
+      a.addEventListener('click', function () {
+        a.classList.add('disabled'); a.setAttribute('aria-disabled', 'true');
+        a.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> ' + a.getAttribute('data-loading-text');
+      });
     });
-  </script>
+
+    var row = document.getElementById('snmpRow');
+    if (!row || !{{ 'true' if device.ip_address else 'false' }}) return;
+    var dot = document.getElementById('snmpDot'), text = document.getElementById('snmpText'), btn = document.getElementById('snmpBtn');
+    dot.classList.add('warn');
+    fetch(row.getAttribute('data-status-url'), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        dot.classList.remove('warn');
+        if (d.available) {
+          dot.classList.add('ok');
+          text.textContent = 'SNMP is responding. View the interface and VLAN layout.';
+          btn.hidden = false;
+        } else {
+          dot.classList.add('bad');
+          text.textContent = 'SNMP is not responding. Enable SNMP v1/v2c on the device and make sure its community matches SNMP_COMMUNITY.';
+        }
+      })
+      .catch(function () { dot.classList.remove('warn'); text.textContent = 'Could not check SNMP status.'; });
+  })();
+</script>
 {% endblock %}

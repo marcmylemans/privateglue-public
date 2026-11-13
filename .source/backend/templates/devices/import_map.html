@@ -1,31 +1,37 @@
 {% extends 'base.html' %}
+{% import '_macros.html' as ui %}
+{% block title %}Map CSV columns · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), ('Import', url_for('devices.import_devices')), ('Map columns', None)]) }}{% endblock %}
+
 {% block content %}
-<h2>Map CSV Columns to Device Fields</h2>
-<form method="post" action="{{ url_for('devices.import_devices') }}">
-    <input type="hidden" name="csv_content" value="{{ csv_content|tojson|safe }}">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Device Field</th>
-                <th>CSV Column</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for field in expected_fields %}
-            <tr>
-                <td>{{ field }}</td>
-                <td>
-                    <select name="map_{{ field }}" class="form-control">
-                        <option value="">-- None --</option>
-                        {% for col in csv_headers %}
-                        <option value="{{ col }}">{{ col }}</option>
-                        {% endfor %}
-                    </select>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <button type="submit" class="btn btn-primary">Import with Mapping</button>
+<div class="narrow-page">
+{{ ui.page_header('Match your columns', "Your file's headers don't match the template. Tell us which column holds what. Columns that look like a match are pre-selected.", icon='arrow-left-right') }}
+
+{% set labels = {'hostname': 'Hostname', 'ip_address': 'IP address', 'mac_address': 'MAC address', 'device_type': 'Type', 'operating_system': 'Operating system', 'os_version': 'OS version', 'serial_number': 'Serial number', 'license_key': 'License key', 'location': 'Location'} %}
+<form method="post" action="{{ url_for('devices.import_devices') }}" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="csv_content" value="{{ csv_content | tojson | forceescape }}">
+  <div class="form-section">
+    {% for field in expected_fields %}
+    {% set norm = field | replace('_', '') %}
+    <div class="row g-2 align-items-center mb-2">
+      <label for="map_{{ field }}" class="col-sm-5 col-form-label">{{ labels.get(field, field) }}{% if field == 'hostname' %} <span class="text-danger-emphasis small">required</span>{% endif %}</label>
+      <div class="col-sm-7">
+        <select name="map_{{ field }}" id="map_{{ field }}" class="form-select" {% if field == 'hostname' %}required{% endif %}>
+          <option value="">Don't import</option>
+          {% for col in csv_headers %}
+          {% set c = (col or '') | lower | replace(' ', '') | replace('_', '') | replace('-', '') %}
+          <option value="{{ col }}" {% if c == norm or (field == 'hostname' and c in ['name', 'host', 'devicename']) or (field == 'ip_address' and c in ['ip', 'ipv4', 'address']) or (field == 'mac_address' and c == 'mac') or (field == 'device_type' and c in ['type', 'devicetype']) or (field == 'operating_system' and c in ['os', 'operatingsystem']) or (field == 'serial_number' and c in ['serial', 'sn']) %}selected{% endif %}>{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Import devices</button>
+    <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary">Start over</a>
+  </div>
 </form>
+</div>
 {% endblock %}

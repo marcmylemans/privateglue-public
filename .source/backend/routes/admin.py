@@ -1,16 +1,16 @@
 from flask import Blueprint, send_file, flash, redirect, url_for, send_from_directory, request, render_template, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from backend.utils.rbac import admin_required
 from backend.models.users import User
 from backend.models.devices import Device
 from backend.models.credentials import Credential
 from backend.extensions import db
+from backend.utils.backup import extract_backup_zip
 import os, sys
 import zipfile
 import socket
 import platform
 from datetime import datetime
-import secrets
 import subprocess
 
 admin_bp = Blueprint("admin", __name__)
@@ -56,26 +56,26 @@ def create_backup():
                     arcname = os.path.join("notes", filename)
                     zipf.write(filepath, arcname=arcname)
 
-    # Flash message with download link
-    flash(
-        f"Backup created successfully: <a href='{url_for('admin.download_backup', filename=zip_filename)}' class='alert-link'>Download backup</a>",
-        "success"
-    )
-    return redirect(url_for("index"))
+    flash(f"Backup {zip_filename} created. Download it from the list below.", "success")
+    return redirect(url_for("admin.about_page") + "#backups")
 
 
 @admin_bp.route("/admin/restore", methods=["POST"])
+@login_required
+@admin_required
 def restore_backup():
     backup_folder = "/app/backups"
     backup_files = [f for f in os.listdir(backup_folder) if f.endswith(".zip")]
 
     if not backup_files:
         flash("No backup file found to restore.", "danger")
-        return redirect(url_for("setup.first_run"))
+        return redirect(url_for("auth.first_run"))
 
     backup_path = os.path.join(backup_folder, backup_files[0])  # Use the first .zip file found
-    with zipfile.ZipFile(backup_path, 'r') as zip_ref:
-        zip_ref.extractall("/app")  # Extract into root of app where /data, /notes, /secret exist
+    ok, message = extract_backup_zip(backup_path, "/app")
+    if not ok:
+        flash(f"Restore failed: {message}", "danger")
+        return redirect(url_for("index"))
 
     flash("Backup successfully restored. Restarting app to apply changes...", "info")
     os.execv(sys.executable, ['python'] + sys.argv)
@@ -91,7 +91,7 @@ def download_backup(filename):
 @login_required
 @admin_required
 def list_users():
-    users = User.query.all()
+    users = User.query.order_by(User.username).all()
     return render_template("admin/users.html", users=users)
 
 @admin_bp.route("/admin/users/edit/<int:user_id>", methods=["GET", "POST"])
@@ -104,6 +104,9 @@ def edit_user(user_id):
         # Update role
         new_role = request.form.get("role")
         if new_role in ["admin", "editor", "readonly"]:
+            if user.role == "admin" and new_role != "admin" and User.query.filter_by(role="admin").count() <= 1:
+                flash("This is the only admin account. Make someone else an admin first.", "danger")
+                return redirect(url_for("admin.edit_user", user_id=user.id))
             user.role = new_role
 
         # Update password (optional)
@@ -115,7 +118,7 @@ def edit_user(user_id):
         user.force_password_reset = bool(request.form.get("force_password_reset"))
 
         db.session.commit()
-        flash("User updated successfully.", "success")
+        flash(f"User '{user.username}' updated.", "success")
         return redirect(url_for("admin.list_users"))
 
     return render_template("admin/edit_user.html", user=user)
@@ -138,6 +141,7 @@ def delete_user(user_id):
     return redirect(url_for("admin.list_users"))
 
 @admin_bp.route("/admin/users/reset/<int:user_id>", methods=["GET", "POST"])
+@login_required
 @admin_required
 def reset_user_password(user_id):
     user = User.query.get_or_404(user_id)
@@ -162,6 +166,7 @@ def reset_user_password(user_id):
     return render_template("admin/reset_password.html", user=user)
 
 @admin_bp.route("/admin/users/create", methods=["GET", "POST"])
+@login_required
 @admin_required
 def create_user():
     if request.method == "POST":
@@ -199,22 +204,26 @@ def about_page():
     note_count = len([f for f in os.listdir("/app/notes") if f.endswith(".md")])
     credential_count = Credential.query.count()
 
-    from backend.routes.devices import get_or_create_probe_api_key
-    api_key = get_or_create_probe_api_key()
     version = get_app_version()
 
     system_info = {
-        "App Version": "0.6.8-BETA2" if current_app.config.get("DEMO_MODE") else version,
-        "App Mode": "Demo" if current_app.config.get("DEMO_MODE") else "Production",
-        "Users": user_count,
-        "Devices": device_count,
-        "Notes": note_count,
-        "Credentials": credential_count,
+        "App version": "0.6.8-BETA2" if current_app.config.get("DEMO_MODE") else version,
+        "Mode": "Demo" if current_app.config.get("DEMO_MODE") else "Production",
         "Hostname": socket.gethostname(),
         "Python": platform.python_version(),
         "Platform": platform.system(),
-        "Current Time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "API Key for Probe": api_key,
+        "Server time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Probe API key": "Hidden. Rotate it in the environment or data file if compromised.",
     }
+    counts = {"Users": user_count, "Devices": device_count, "Notes": note_count, "Credentials": credential_count}
 
-    return render_template("admin/about.html", system_info=system_info)
+    backup_dir = "/app/backups"
+    backups = []
+    if os.path.isdir(backup_dir):
+        for name in os.listdir(backup_dir):
+            if name.endswith(".zip"):
+                path = os.path.join(backup_dir, name)
+                backups.append({"name": name, "size": os.path.getsize(path), "mtime": os.path.getmtime(path)})
+    backups.sort(key=lambda b: b["mtime"], reverse=True)
+
+    return render_template("admin/about.html", system_info=system_info, counts=counts, backups=backups)

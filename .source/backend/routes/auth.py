@@ -3,22 +3,29 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from backend.models.users import User
 from backend.forms.auth import LoginForm, RegistrationForm, ChangePasswordForm
-from backend.extensions import db
+from backend.extensions import db, limiter
 from backend.utils.backup import extract_backup_zip
 from backend.utils.reboot import shutdown_server
+from sqlalchemy.exc import IntegrityError
 import os, sys, threading, time
 
 auth_bp = Blueprint("auth", __name__)
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     # Optional: redirect to register if no users exist
     if User.query.count() == 0:
+        # Nobody can log in yet, so drop the "Please log in" flash from the login redirect.
+        session.pop("_flashes", None)
         backups = [f for f in os.listdir('/app/backups') if f.endswith('.zip')]
         show_restore_option = len(backups) > 0
-        return render_template('auth/first_run.html', show_restore_option=show_restore_option, backups=backups)
+        return render_template('auth/first_run.html', zip_found=show_restore_option, backups=backups)
 
     form = LoginForm()
+
+    if current_user.is_authenticated and request.method == "GET":
+        return redirect(url_for("index"))
 
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
@@ -30,6 +37,9 @@ def login():
                 flash("You must change your password before continuing.", "warning")
                 return redirect(url_for('auth.force_change_password'))
             else:
+                next_url = request.args.get("next", "")
+                if next_url.startswith("/") and not next_url.startswith("//"):
+                    return redirect(next_url)
                 return redirect(url_for('index'))
         else:
             flash("Invalid username or password", "danger")
@@ -77,6 +87,7 @@ def logout():
 
 
 @auth_bp.route("/check_username")
+@limiter.limit("10 per minute")
 def check_username():
     from backend.models.users import User  # or your adjusted import
     username = request.args.get("username", "")
@@ -99,9 +110,12 @@ def first_run():
         if action == "restore" and zip_found:
             try:
                 zip_path = os.path.join(backup_folder, zip_files[0])
-                extract_backup_zip(zip_path)
-                flash("Backup successfully restored. Please restart the app.", "success")
-                return redirect(url_for("auth.login"))
+                ok, message = extract_backup_zip(zip_path)
+                if ok:
+                    flash("Backup successfully restored. Please restart the app.", "success")
+                    return redirect(url_for("auth.login"))
+                flash(f"Restore failed: {message}", "danger")
+                return redirect(url_for("auth.first_run"))
             except Exception as e:
                 flash(f"Restore failed: {str(e)}", "danger")
                 return redirect(url_for("auth.first_run"))
@@ -114,7 +128,10 @@ def first_run():
                 uploaded_file.save(save_path)
 
                 try:
-                    extract_backup_zip(save_path)
+                    ok, message = extract_backup_zip(save_path)
+                    if not ok:
+                        flash(f"Restore failed: {message}", "danger")
+                        return redirect(url_for("auth.first_run"))
                     shutdown_func = request.environ.get("werkzeug.server.shutdown")
 
                     if shutdown_func:

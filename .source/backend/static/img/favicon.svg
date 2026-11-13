@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="PrivateGlue">
+  <rect width="32" height="32" rx="8" fill="#4f46e5"/>
+  <circle cx="10" cy="11" r="3.2" fill="#fff"/>
+  <circle cx="22" cy="11" r="3.2" fill="#fff" fill-opacity=".85"/>
+  <path d="M10 11v5.5a6 6 0 0 0 12 0V11" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M16 22.5c0 0-2.4 2.7-2.4 4.1a2.4 2.4 0 0 0 4.8 0c0-1.4-2.4-4.1-2.4-4.1z" fill="#fbbf24"/>
+</svg>

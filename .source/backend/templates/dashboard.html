@@ -1,96 +1,161 @@
 {% extends 'base.html' %}
-{% block title %}Dashboard - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Dashboard · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Dashboard</h2>
+{% call ui.page_header('Dashboard', 'Overview of everything documented in ' ~ APP_NAME ~ '.') %}
+  {% if can_edit %}
+  <div class="dropdown">
+    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-plus-lg" aria-hidden="true"></i> New
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li><a class="dropdown-item" href="{{ url_for('devices.add_device') }}"><i class="bi bi-hdd-network" aria-hidden="true"></i> Device</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('notes.create_note') }}"><i class="bi bi-journal-text" aria-hidden="true"></i> Note</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('credentials.add_credential') }}"><i class="bi bi-key" aria-hidden="true"></i> Credential</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="{{ url_for('devices.import_devices') }}"><i class="bi bi-upload" aria-hidden="true"></i> Import devices from CSV</a></li>
+    </ul>
+  </div>
+  {% endif %}
+{% endcall %}
 
-  <div class="row g-4">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">Devices</h5>
-          <p class="text-muted">{{ device_count }} total</p>
-          <div class="d-grid gap-2">
-            <a href="{{ url_for('devices.add_device') }}" class="btn btn-sm btn-primary">Add Device</a>
-            <a href="{{ url_for('devices.list_devices') }}" class="btn btn-sm btn-outline-secondary">View Devices</a>
-          </div>
-        </div>
+{% if device_count == 0 and note_count == 0 and credential_count == 0 %}
+  <div class="panel">
+    {% call ui.empty_state('rocket-takeoff', 'Welcome to ' ~ APP_NAME,
+        'Start by adding the devices in your lab or network. Notes and credentials can then be linked to them.') %}
+      {% if can_edit %}
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add your first device</a>
+        <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Import from CSV</a>
       </div>
-    </div>
+      {% endif %}
+    {% endcall %}
+  </div>
+{% else %}
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">Notes</h5>
-          <p class="text-muted">{{ note_count }} total</p>
-          <div class="d-grid gap-2">
-            <a href="{{ url_for('notes.create_note') }}" class="btn btn-sm btn-primary">Add Note</a>
-            <a href="{{ url_for('notes.list_notes') }}" class="btn btn-sm btn-outline-secondary">View Notes</a>
-          </div>
-        </div>
-      </div>
-    </div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <a class="stat-card" href="{{ url_for('devices.list_devices', clear=1) }}">
+      <span class="stat-icon tone-brand"><i class="bi bi-hdd-network" aria-hidden="true"></i></span>
+      <span><span class="stat-value d-block">{{ device_count }}</span><span class="stat-label">Devices</span></span>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a class="stat-card" href="{{ url_for('notes.list_notes', clear=1) }}">
+      <span class="stat-icon tone-amber"><i class="bi bi-journal-text" aria-hidden="true"></i></span>
+      <span><span class="stat-value d-block">{{ note_count }}</span><span class="stat-label">Notes</span></span>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a class="stat-card" href="{{ url_for('credentials.list_credentials') }}">
+      <span class="stat-icon tone-green"><i class="bi bi-key" aria-hidden="true"></i></span>
+      <span><span class="stat-value d-block">{{ credential_count }}</span><span class="stat-label">Credentials</span></span>
+    </a>
+  </div>
+  <div class="col-6 col-xl-3">
+    <a class="stat-card" href="{{ url_for('devices.list_devices', clear=1) }}">
+      <span class="stat-icon tone-sky"><i class="bi bi-geo-alt" aria-hidden="true"></i></span>
+      <span><span class="stat-value d-block">{{ location_count }}</span><span class="stat-label">Locations</span></span>
+    </a>
+  </div>
+</div>
 
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm">
-        <div class="card-body">
-          <h5 class="card-title">Credentials</h5>
-          <p class="text-muted">{{ credential_count }} total</p>
-          <div class="d-grid gap-2">
-            <a href="{{ url_for('credentials.add_credential') }}" class="btn btn-sm btn-primary">Add Credential</a>
-            <a href="{{ url_for('credentials.list_credentials') }}" class="btn btn-sm btn-outline-secondary">View Credentials</a>
-          </div>
-        </div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <section class="panel h-100" aria-labelledby="recentDevicesTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="recentDevicesTitle"><i class="bi bi-clock-history" aria-hidden="true"></i> Recently added devices</h2>
+        <a href="{{ url_for('devices.list_devices') }}" class="small">View all</a>
       </div>
-    </div>
+      {% if recent_devices %}
+      <ul class="item-list">
+        {% for dev in recent_devices %}
+        <li>
+          <span class="item-icon"><i class="bi bi-{{ dev.device_type | device_icon }}" aria-hidden="true"></i></span>
+          <a class="item-main item-link" href="{{ url_for('devices.view_device', id=dev.id) }}">
+            <span class="item-title">{{ dev.hostname }}</span>
+            <span class="item-meta">{{ dev.device_type | type_label or 'No type' }}{% if dev.location %} · {{ dev.location }}{% endif %}</span>
+          </a>
+          {% if dev.ip_address %}<span class="mono small text-body-secondary d-none d-sm-inline">{{ dev.ip_address }}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        {{ ui.empty_state('hdd-network', 'No devices yet', None, url_for('devices.add_device') if can_edit else None, 'Add device') }}
+      {% endif %}
+    </section>
   </div>
 
-  {% if recent_credentials %}
-    <hr>
-    <h5 class="mt-4">Recent Credentials</h5>
-    <ul class="list-group list-group-flush mb-4">
-      {% for cred in recent_credentials %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <a href="{{ url_for('credentials.view_credential', id=cred.id) }}">{{ cred.title }}</a>
-          {% if cred.devices %}
-            <small class="text-muted">
-              {% for device in cred.devices %}
-                {{ device.hostname }}{% if not loop.last %}, {% endif %}
-              {% endfor %}
-            </small>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+  <div class="col-lg-5">
+    <section class="panel h-100" aria-labelledby="byTypeTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="byTypeTitle"><i class="bi bi-pie-chart" aria-hidden="true"></i> Devices by type</h2>
+      </div>
+      <div class="panel-body">
+        {% if type_breakdown %}
+          {% set max_count = type_breakdown[0][1] %}
+          {% for type_name, count in type_breakdown[:8] %}
+            <a class="bar-row" href="{{ url_for('devices.list_devices', type=type_name if type_name != 'Other' else '') }}" aria-label="{{ type_name }}: {{ count }} devices">
+              <span class="bar-label"><i class="bi bi-{{ type_name | device_icon }} text-body-secondary" aria-hidden="true"></i>{{ type_name | type_label }}</span>
+              <span class="bar-track" aria-hidden="true"><span class="bar-fill d-block" style="width: {{ (count / max_count * 100) | round(0) }}%"></span></span>
+              <span class="bar-value">{{ count }}</span>
+            </a>
+          {% endfor %}
+        {% else %}
+          <p class="text-body-secondary mb-0">Add devices to see a breakdown.</p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
 
-  {% if recent_devices %}
-    <hr>
-    <h5>Recent Devices</h5>
-    <ul class="list-group list-group-flush mb-4">
-      {% for dev in recent_devices %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <a href="{{ url_for('devices.view_device', id=dev.id) }}">{{ dev.hostname }}</a>
-          <small class="text-muted">{{ dev.device_type or 'No type' }}</small>
+  <div class="col-lg-7">
+    <section class="panel h-100" aria-labelledby="recentNotesTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="recentNotesTitle"><i class="bi bi-journal-text" aria-hidden="true"></i> Recently updated notes</h2>
+        <a href="{{ url_for('notes.list_notes') }}" class="small">View all</a>
+      </div>
+      {% if recent_notes %}
+      <ul class="item-list">
+        {% for note in recent_notes %}
+        <li>
+          <span class="item-icon"><i class="bi bi-file-earmark-text" aria-hidden="true"></i></span>
+          <a class="item-main item-link" href="{{ url_for('notes.view_note', filename=note.filename) }}">
+            <span class="item-title">{{ note.filename | note_title }}</span>
+            <span class="item-meta">Updated {{ note.mtime | timeago }}{% if note.devices %} · {{ note.devices | map(attribute='hostname') | join(', ') }}{% endif %}</span>
+          </a>
         </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+        {% endfor %}
+      </ul>
+      {% else %}
+        {{ ui.empty_state('journal-text', 'No notes yet', None, url_for('notes.create_note') if can_edit else None, 'Write a note') }}
+      {% endif %}
+    </section>
+  </div>
 
-  {% if recent_notes %}
-    <hr>
-    <h5>Recently Linked Notes</h5>
-    <ul class="list-group list-group-flush">
-      {% for note in recent_notes %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          <a href="{{ url_for('notes.view_note', filename=note.filename) }}">{{ note.filename[:-3] }}</a>
-          {% if note.device %}
-            <small class="text-muted">↳ {{ note.device.hostname }}</small>
-          {% endif %}
+  <div class="col-lg-5">
+    <section class="panel h-100" aria-labelledby="recentCredsTitle">
+      <div class="panel-header">
+        <h2 class="panel-title" id="recentCredsTitle"><i class="bi bi-key" aria-hidden="true"></i> Recent credentials</h2>
+        <a href="{{ url_for('credentials.list_credentials') }}" class="small">View all</a>
+      </div>
+      {% if recent_credentials %}
+      <ul class="item-list">
+        {% for cred in recent_credentials %}
+        <li>
+          <span class="item-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+          <a class="item-main item-link" href="{{ url_for('credentials.view_credential', id=cred.id) }}">
+            <span class="item-title">{{ cred.title }}</span>
+            <span class="item-meta">{{ cred.username or 'No username' }}{% if cred.devices %} · {{ cred.devices | map(attribute='hostname') | join(', ') }}{% endif %}</span>
+          </a>
         </li>
-      {% endfor %}
-    </ul>
-  {% endif %}
+        {% endfor %}
+      </ul>
+      {% else %}
+        {{ ui.empty_state('key', 'No credentials yet', None, url_for('credentials.add_credential') if can_edit else None, 'Add credential') }}
+      {% endif %}
+    </section>
+  </div>
 </div>
+{% endif %}
 {% endblock %}

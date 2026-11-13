@@ -1,20 +1,35 @@
-version: "3.8"
+# PrivateGlue: self-hosted IT documentation
+#
+# Quick start:
+#   echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+#   docker compose up -d
+# Then open http://localhost:5000 and create your admin account.
+#
+# This one file is used everywhere: this repo, privateglue-public and
+# https://privateglue.app/docker-compose.yml. It works with plain docker compose,
+# Dockge and Portainer: values come from the .env file next to it.
+#
+# Build from source instead of pulling the image:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+
 services:
   privateglue:
-    image: ghcr.io/marcmylemans/privateglue:latest
+    image: ghcr.io/marcmylemans/privateglue:${PRIVATEGLUE_TAG:-latest}
     ports:
-      - "5000:5000"
+      - "${PRIVATEGLUE_PORT:-5000}:5000"
+    environment:
+      # Required. Signs login sessions. Compose stops with this message if it's missing.
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env, e.g. echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env}
+      # Optional: user/group id that owns the data folders (default 1000:1000).
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
     volumes:
-      - ./notes:/app/notes
-      - ./data:/app/data
-      - ./backups:/app/backups
-      - secretkey:/app/secret  # use a named volume
-    restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      - ./notes:/app/notes      # Markdown notes
+      - ./data:/app/data        # SQLite database
+      - ./backups:/app/backups  # backups created from the UI
+      - secretkey:/app/secret   # encryption key for stored credentials: back this up!
+    restart: unless-stopped
+    # Health check is built into the image.
+
 volumes:
   secretkey:

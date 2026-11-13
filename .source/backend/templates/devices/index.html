@@ -1,131 +1,130 @@
 {% extends 'base.html' %}
-{% block title %}Devices - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Devices · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0">Devices <small class="text-muted fs-6">({{ devices|length }})</small></h2>
-      <div>
-        <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary mb-3">Add Device</a>
-        <a href="{{ url_for('devices.import_devices') }}"
-           class="btn btn-outline-secondary mb-3 ms-2">
-          Import Devices
-        </a>
-      </div>
-    </div>
-
-    <div class="mb-3">
-      {% if discovered_count and discovered_count > 0 %}
-        <a href="{{ url_for('devices.show_discovered_devices') }}" class="btn btn-warning">
-          <i class="bi bi-search"></i> {{ discovered_count }} Discovered Device{{ 's' if discovered_count > 1 else '' }} Ready to Import
-        </a>
-      {% endif %}
-    </div>
-
-  <!-- Filter Bar -->
-  <form method="GET"
-        action="{{ url_for('devices.list_devices') }}"
-        class="row g-2 align-items-end mb-3">
-    <div class="col-md-3">
-      <label for="type" class="form-label mb-0">Type</label>
-      <select name="type"
-              id="type"
-              class="form-select form-select-sm">
-        <option value="">All Types</option>
-        {% for type in all_types %}
-          <option value="{{ type }}"
-                  {% if filter_type == type %}selected{% endif %}>
-            {{ type }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-3">
-      <label for="location" class="form-label mb-0">Location</label>
-      <select name="location"
-              id="location"
-              class="form-select form-select-sm">
-        <option value="">All Locations</option>
-        {% for location in all_locations %}
-          <option value="{{ location }}"
-                  {% if filter_location == location %}selected{% endif %}>
-            {{ location }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="col-md-auto">
-      <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
-      <a href="{{ url_for('devices.list_devices', clear=1) }}"
-         class="btn btn-sm btn-outline-secondary">
-        Reset
-      </a>
-    </div>
-  </form>
-
-  <!-- Active Filter Badges -->
-  {% if filter_type or filter_location %}
-    <div class="mb-3">
-      {% if filter_type %}
-        <span class="badge rounded-pill text-bg-light border me-2">
-          Type: {{ filter_type }}
-        </span>
-      {% endif %}
-      {% if filter_location %}
-        <span class="badge rounded-pill text-bg-light border me-2">
-          Location: {{ filter_location }}
-        </span>
-      {% endif %}
-    </div>
+{% call ui.page_header('Devices', 'Hardware, VMs and network gear in your environment.', count=devices|length) %}
+  {% if can_edit %}
+    <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Import CSV</a>
+    <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add device</a>
   {% endif %}
+{% endcall %}
 
-  <!-- Device Table -->
+{% if discovered_count and discovered_count > 0 and can_edit %}
+  <div class="alert alert-info" role="status">
+    <i class="bi bi-radar" aria-hidden="true"></i>
+    <div class="flex-grow-1">
+      The discovery probe found <strong>{{ discovered_count }} device{{ 's' if discovered_count != 1 }}</strong> that you can review and import.
+    </div>
+    <a href="{{ url_for('devices.show_discovered_devices') }}" class="btn btn-sm btn-primary">Review</a>
+  </div>
+{% endif %}
+
+<form method="GET" action="{{ url_for('devices.list_devices') }}" class="toolbar" role="search" aria-label="Filter devices">
+  <div class="search-field">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label for="deviceFilter" class="visually-hidden">Filter by name, IP, OS or location</label>
+    <input type="search" id="deviceFilter" class="form-control" placeholder="Filter by name, IP, OS, location…"
+           data-filter-target="#deviceTable" data-filter-count="#deviceCount" data-filter-noun="devices" autocomplete="off">
+  </div>
+  <label for="type" class="visually-hidden">Type</label>
+  <select name="type" id="type" class="form-select" data-autosubmit>
+    <option value="">All types</option>
+    {% for type in all_types %}
+      <option value="{{ type }}" {% if filter_type == type %}selected{% endif %}>{{ type }}</option>
+    {% endfor %}
+  </select>
+  <label for="location" class="visually-hidden">Location</label>
+  <select name="location" id="location" class="form-select" data-autosubmit>
+    <option value="">All locations</option>
+    {% for location in all_locations %}
+      <option value="{{ location }}" {% if filter_location == location %}selected{% endif %}>{{ location }}</option>
+    {% endfor %}
+  </select>
+  <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
+  {% if filter_type or filter_location %}
+    <a href="{{ url_for('devices.list_devices', clear=1) }}" class="btn btn-ghost"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear filters</a>
+  {% endif %}
+  <span class="result-count" id="deviceCount" aria-live="polite">{{ devices|length }} devices</span>
+</form>
+
+{% if devices %}
+<div class="table-panel">
   <div class="table-responsive">
-    <table class="table table-dark table-hover align-middle">
-      <thead class="table-light">
+    <table class="table pg-table table-hover" id="deviceTable">
+      <thead>
         <tr>
           <th scope="col">Hostname</th>
-          <th scope="col">IP</th>
-          <th scope="col">Type</th>
-          <th scope="col">Location</th>
-          <th scope="col" class="text-end">Actions</th>
+          <th scope="col">IP address</th>
+          <th scope="col" class="d-none d-md-table-cell">Type</th>
+          <th scope="col" class="d-none d-lg-table-cell">Operating system</th>
+          <th scope="col" class="d-none d-md-table-cell">Location</th>
+          <th scope="col" class="actions"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
       <tbody>
         {% for device in devices %}
-          <tr style="cursor: pointer;"
-              onclick="window.location='{{ url_for('devices.view_device', id=device.id) }}'">
-            <td>{{ device.hostname }}</td>
-            <td>{{ device.ip_address or '—' }}</td>
-            <td>{{ device.device_type or '—' }}</td>
-            <td>{{ device.location or '—' }}</td>
-            <td class="text-end">
-              <a href="{{ url_for('devices.edit_device', id=device.id) }}"
-                 class="btn btn-sm btn-outline-secondary"
-                 title="Edit">
-                Edit
-              </a>
-              <a href="{{ url_for('devices.clone_device', id=device.id) }}"
-                 class="btn btn-sm btn-outline-dark"
-                 title="Clone">
-                Clone
-              </a>
+          <tr data-href="{{ url_for('devices.view_device', id=device.id) }}"
+              data-filter-text="{{ device.hostname }} {{ device.ip_address or '' }} {{ device.mac_address or '' }} {{ device.device_type or '' }} {{ device.operating_system or '' }} {{ device.os_version or '' }} {{ device.location or '' }}">
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="item-icon" title="{{ device.device_type or 'Unknown type' }}"><i class="bi bi-{{ device.device_type | device_icon }}" aria-hidden="true"></i></span>
+                <div class="min-w-0">
+                  <a class="row-title" href="{{ url_for('devices.view_device', id=device.id) }}">{{ device.hostname }}</a>
+                  <div class="small text-body-secondary d-md-none">{{ device.device_type | type_label }}{% if device.location %} · {{ device.location }}{% endif %}</div>
+                </div>
+              </div>
             </td>
-          </tr>
-        {% else %}
-          <tr>
-            <td colspan="5" class="text-center text-muted">
-              No devices found.
+            <td>{% if device.ip_address %}<span class="mono">{{ device.ip_address }}</span>{% else %}<span class="text-body-tertiary">–</span>{% endif %}</td>
+            <td class="d-none d-md-table-cell">{{ device.device_type | type_label or '–' }}</td>
+            <td class="d-none d-lg-table-cell">
+              {% if device.operating_system %}{{ device.operating_system }}{% if device.os_version %} <span class="text-body-secondary">{{ device.os_version }}</span>{% endif %}{% else %}<span class="text-body-tertiary">–</span>{% endif %}
+            </td>
+            <td class="d-none d-md-table-cell">{{ device.location or '–' }}</td>
+            <td class="actions">
+              {% if can_edit %}
+              <div class="dropdown">
+                <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Actions for {{ device.hostname }}">
+                  <i class="bi bi-three-dots" aria-hidden="true"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="{{ url_for('devices.edit_device', id=device.id) }}"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a></li>
+                  <li><a class="dropdown-item" href="{{ url_for('devices.clone_device', id=device.id) }}"><i class="bi bi-copy" aria-hidden="true"></i> Duplicate</a></li>
+                  {% if is_admin %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <form method="POST" action="{{ url_for('devices.delete_device', id=device.id) }}"
+                          data-confirm="'{{ device.hostname }}' will be removed. Linked credentials stay, but lose this device link." data-confirm-title="Delete device?">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash3" aria-hidden="true"></i> Delete</button>
+                    </form>
+                  </li>
+                  {% endif %}
+                </ul>
+              </div>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
+        <tr class="filter-empty" hidden><td colspan="6"><i class="bi bi-search d-block fs-4 mb-1" aria-hidden="true"></i>No devices match your filter.</td></tr>
       </tbody>
     </table>
   </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-  {{ super() }}
+{% elif filter_type or filter_location %}
+  <div class="panel">
+    {{ ui.empty_state('funnel', 'No devices match these filters', 'Try a different type or location.', url_for('devices.list_devices', clear=1), 'Clear filters', 'x-lg') }}
+  </div>
+{% else %}
+  <div class="panel">
+    {% call ui.empty_state('hdd-network', 'No devices yet', 'Add servers, switches, VMs and anything else you want to document.') %}
+      {% if can_edit %}
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add device</a>
+        <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Import CSV</a>
+      </div>
+      {% endif %}
+    {% endcall %}
+  </div>
+{% endif %}
 {% endblock %}

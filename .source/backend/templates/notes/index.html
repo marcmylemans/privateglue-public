@@ -1,80 +1,74 @@
 {% extends "base.html" %}
-{% block title %}Notes - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Notes · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4">
-  <div class="row">
-    <!-- Sidebar Filters -->
-    <div class="col-md-3 mb-4">
-      <h5 class="mb-3">Filters</h5>
-      <form method="GET" action="{{ url_for('notes.list_notes') }}">
-        <div class="mb-3">
-          <label for="tag" class="form-label">Tag</label>
-          <select name="tag" id="tag" class="form-select">
-            <option value="">-- All Tags --</option>
-            {% for tag in all_tags %}
-              <option value="{{ tag }}" {% if filter_tag == tag %}selected{% endif %}>{{ tag }}</option>
-            {% endfor %}
-          </select>
-        </div>
+{% call ui.page_header('Notes', 'Markdown documentation, tagged and linked to devices.', count=notes|length) %}
+  {% if can_edit %}
+    <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> New note</a>
+  {% endif %}
+{% endcall %}
 
-        <div class="mb-3">
-          <label for="device_id" class="form-label">Device</label>
-          <select name="device_id" id="device_id" class="form-select">
-            <option value="">-- All Devices --</option>
-            {% for device in all_devices %}
-              <option value="{{ device.id }}" {% if filter_device == device.id %}selected{% endif %}>{{ device.hostname }}</option>
-            {% endfor %}
-          </select>
-        </div>
+<form method="GET" action="{{ url_for('notes.list_notes') }}" class="toolbar" role="search" aria-label="Filter notes">
+  <div class="search-field">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label for="noteFilter" class="visually-hidden">Filter notes</label>
+    <input type="search" id="noteFilter" class="form-control" placeholder="Filter by title, tag or text…"
+           data-filter-target="#noteGrid" data-filter-count="#noteCount" data-filter-noun="notes" autocomplete="off">
+  </div>
+  <label for="device_id" class="visually-hidden">Device</label>
+  <select name="device_id" id="device_id" class="form-select" data-autosubmit>
+    <option value="">All devices</option>
+    {% for device in all_devices %}
+      <option value="{{ device.id }}" {% if filter_device == device.id %}selected{% endif %}>{{ device.hostname }}</option>
+    {% endfor %}
+  </select>
+  {% if filter_tag %}<input type="hidden" name="tag" value="{{ filter_tag }}">{% endif %}
+  <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
+  {% if filter_tag or filter_device %}
+    <a href="{{ url_for('notes.list_notes', clear=1) }}" class="btn btn-ghost"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear filters</a>
+  {% endif %}
+  <span class="result-count" id="noteCount" aria-live="polite">{{ notes|length }} notes</span>
+</form>
 
-        <div class="d-grid gap-2">
-          <button type="submit" class="btn btn-outline-primary">Apply</button>
-          <a href="{{ url_for('notes.list_notes', clear=1) }}" class="btn btn-outline-danger">Clear</a>
-        </div>
-      </form>
+{% if all_tags %}
+<nav class="chip-list mb-3" aria-label="Filter by tag">
+  <a href="{{ url_for('notes.list_notes', tag='') }}" class="chip{% if not filter_tag %} active{% endif %}"{% if not filter_tag %} aria-current="true"{% endif %}>All tags</a>
+  {% for tag in all_tags %}
+    <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="chip{% if filter_tag == tag %} active{% endif %}"{% if filter_tag == tag %} aria-current="true"{% endif %}>#{{ tag }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+
+{% if notes %}
+<div class="note-grid" id="noteGrid">
+  {% for note in notes %}
+  <article class="note-card" data-filter-text="{{ note.filename | note_title }} {{ note.tags | join(' ') }} {{ note.excerpt }}">
+    <h2><a href="{{ url_for('notes.view_note', filename=note.filename) }}">{{ note.filename | note_title }}</a></h2>
+    <p class="excerpt">{{ note.excerpt or 'Empty note' }}</p>
+    {% if note.tags or note.device_ids %}
+    <div class="chip-list">
+      {% for tag in note.tags %}{{ ui.tag_chip(tag) }}{% endfor %}
+      {% for device_id in note.device_ids %}
+        {% set device = devices_by_id.get(device_id) %}
+        {% if device %}{{ ui.device_chip(device) }}{% endif %}
+      {% endfor %}
     </div>
-
-    <!-- Main Content -->
-    <div class="col-md-9">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="mb-0">Notes</h2>
-        <a href="{{ url_for('notes.create_note') }}" class="btn btn-primary">Add Note</a>
-      </div>
-
-      {% if notes %}
-        {% for note in notes %}
-        <div class="card mb-3 shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="card-title mb-1">
-                <a href="{{ url_for('notes.view_note', filename=note.filename) }}" class="text-decoration-none">
-                  {{ note.filename[:-3] }}
-                </a>
-              </h5>
-              <form method="POST" action="{{ url_for('notes.delete_note', filename=note.filename) }}"
-                    onsubmit="return confirm('Delete this note?');">
-                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-              </form>
-            </div>
-            <div class="mt-2">
-              {% for tag in note.tags %}
-                <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge bg-secondary me-1">{{ tag }}</a>
-              {% endfor %}
-              {% for device_id in note.device_ids %}
-                {% set device = all_devices | selectattr("id", "equalto", device_id) | list | first %}
-                {% if device %}
-                  <a href="{{ url_for('notes.list_notes', device_id=device.id) }}" class="badge bg-dark me-1">{{ device.hostname }}</a>
-                {% endif %}
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="alert alert-warning">No notes found for the selected filter(s).</div>
-      {% endif %}
-    </div>
+    {% endif %}
+    <div class="note-meta"><span><i class="bi bi-clock" aria-hidden="true"></i> Updated {{ note.mtime | timeago }}</span></div>
+  </article>
+  {% endfor %}
+  <div class="filter-empty panel" hidden>
+    {{ ui.empty_state('search', 'No notes match your filter') }}
   </div>
 </div>
+{% elif filter_tag or filter_device %}
+  <div class="panel">
+    {{ ui.empty_state('funnel', 'No notes match these filters', 'Try another tag or device.', url_for('notes.list_notes', clear=1), 'Clear filters', 'x-lg') }}
+  </div>
+{% else %}
+  <div class="panel">
+    {{ ui.empty_state('journal-text', 'No notes yet', 'Write runbooks, network plans and how-tos in Markdown, and link them to devices.', url_for('notes.create_note') if can_edit else None, 'Write your first note') }}
+  </div>
+{% endif %}
 {% endblock %}

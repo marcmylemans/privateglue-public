@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong · {{ APP_NAME }}{% endblock %}
+{% block content %}
+<div class="error-page{{ ' bare-card wide' if not current_user.is_authenticated }}">
+  <div class="error-code" aria-hidden="true">500</div>
+  <h1 class="h3 mt-3 mb-2">Something went wrong</h1>
+  <p class="text-body-secondary mb-4">An unexpected error occurred. Try again, and check the container logs if it keeps happening.</p>
+  <div class="d-flex flex-wrap justify-content-center gap-2">
+    <a href="{{ url_for('index') }}" class="btn btn-primary"><i class="bi bi-house" aria-hidden="true"></i> Go to dashboard</a>
+    <button type="button" class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Go back</button>
+  </div>
+</div>
+{% endblock %}

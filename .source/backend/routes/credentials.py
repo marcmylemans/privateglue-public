@@ -21,7 +21,7 @@ def list_credentials():
     if filter_device:
         query = query.join(Credential.devices).filter(Device.id == filter_device)
     
-    credentials = query.all()
+    credentials = query.order_by(db.func.lower(Credential.title)).all()
 
     return render_template(
         "credentials/index.html",
@@ -59,6 +59,10 @@ def add_credential():
         notes = request.form.get("notes", "").strip()
         device_ids = request.form.getlist("devices")
 
+        if not title:
+            flash("Title is required.", "danger")
+            return redirect(request.url)
+
         cred = Credential(title=title, username=username, password=password, notes=notes)
         for device_id in device_ids:
             device = Device.query.get(int(device_id))
@@ -67,19 +71,19 @@ def add_credential():
 
         db.session.add(cred)
         db.session.commit()
-        flash("Credential saved successfully.", "success")
-        return redirect(url_for("credentials.list_credentials"))
+        flash(f"Credential '{cred.title}' saved.", "success")
+        return redirect(url_for("credentials.view_credential", id=cred.id))
 
     # Handle GET (prefill logic)
-    all_devices = Device.query.all()
-    device_id = request.args.get("device_id")
+    all_devices = Device.query.order_by(db.func.lower(Device.hostname)).all()
+    device_id = request.args.get("device_id", type=int)
     default_title = ""
     linked_device_ids = []
 
     if device_id:
-        device = Device.query.get(device_id)
+        device = db.session.get(Device, device_id)
         if device:
-            default_title = device.hostname
+            default_title = f"{device.hostname} login"
             linked_device_ids = [device.id]
 
     return render_template(
@@ -103,9 +107,16 @@ def edit_credential(id):
     cred = Credential.query.get_or_404(id)
 
     if request.method == "POST":
-        cred.title = request.form.get("title", "").strip()
+        new_title = request.form.get("title", "").strip()
+        if not new_title:
+            flash("Title is required.", "danger")
+            return redirect(request.url)
+        cred.title = new_title
         cred.username = request.form.get("username", "").strip()
-        cred.password = request.form.get("password", "").strip()
+        # The form says "leave blank to keep the current password", so only overwrite when filled in.
+        new_password = request.form.get("password", "")
+        if new_password:
+            cred.password = new_password
         cred.notes = request.form.get("notes", "").strip()
 
         device_ids = request.form.getlist("devices")
@@ -116,10 +127,10 @@ def edit_credential(id):
                 cred.devices.append(dev)
 
         db.session.commit()
-        flash("Credential updated successfully.", "success")
+        flash(f"Credential '{cred.title}' updated.", "success")
         return redirect(url_for("credentials.view_credential", id=cred.id))
 
-    all_devices = Device.query.all()
+    all_devices = Device.query.order_by(db.func.lower(Device.hostname)).all()
     linked_device_ids = [d.id for d in cred.devices]
 
     return render_template(
@@ -137,7 +148,8 @@ def edit_credential(id):
 @admin_required
 def delete_credential(id):
     cred = Credential.query.get_or_404(id)
+    title = cred.title
     db.session.delete(cred)
     db.session.commit()
-    flash("Credential deleted successfully.", "success")
+    flash(f"Credential '{title}' deleted.", "success")
     return redirect(url_for("credentials.list_credentials"))

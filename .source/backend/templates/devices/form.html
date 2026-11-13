@@ -1,143 +1,143 @@
 {% extends 'base.html' %}
-{% block title %}
-  {% if clone %}
-    Clone Device - PrivateGlue
-  {% elif device %}
-    Edit Device - PrivateGlue
+{% import '_macros.html' as ui %}
+{% set is_edit = device and device.id and not clone %}
+{% block title %}{% if clone %}Duplicate device{% elif is_edit %}Edit {{ device.hostname }}{% else %}Add device{% endif %} · {{ APP_NAME }}{% endblock %}
+
+{% block breadcrumb %}
+  {% if is_edit %}
+    {{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), (device.hostname, url_for('devices.view_device', id=device.id)), ('Edit', None)]) }}
+  {% elif clone %}
+    {{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), (source.hostname, url_for('devices.view_device', id=source.id)), ('Duplicate', None)]) }}
   {% else %}
-    Add Device - PrivateGlue
+    {{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), ('Add device', None)]) }}
   {% endif %}
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">
-    {% if clone %}
-      Clone Device: {{ device.hostname }}
-    {% elif device %}
-      Edit Device
-    {% else %}
-      Add Device
-    {% endif %}
-  </h2>
+<div class="narrow-page">
+{% if clone %}
+  {{ ui.page_header('Duplicate ' ~ source.hostname, 'Type, OS and location are copied. Give the new device its own name and network details.', icon='copy') }}
+{% elif is_edit %}
+  {{ ui.page_header('Edit ' ~ device.hostname, icon=device.device_type | device_icon) }}
+{% else %}
+  {{ ui.page_header('Add device', 'Only the hostname and type are required. You can fill in the rest later.', icon='plus-lg') }}
+{% endif %}
 
-  <form method="POST" action="{% if clone %}{{ url_for('devices.add_device') }}{% elif device %}{{ url_for('devices.edit_device', id=device.id) }}{% else %}{{ url_for('devices.add_device') }}{% endif %}">
-    <!-- Hostname -->
-    <div class="mb-3">
-      <label class="form-label">Hostname
-        <span class="help-icon" data-toggle="tooltip" title="Unique name identifying your device on the network.">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="hostname" value="{{ device.hostname if device else '' }}" required>
+{% set types = ['Desktop', 'Laptop', 'Server', 'VM', 'Switch', 'Router', 'Firewall', 'AccessPoint', 'NAS', 'Printer', 'IoT', 'Camera', 'Phone', 'Tablet', 'Other'] %}
+<form method="POST" class="panel" novalidate
+      action="{% if is_edit %}{{ url_for('devices.edit_device', id=device.id) }}{% else %}{{ url_for('devices.add_device') }}{% endif %}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="form-section">
+    <h2 class="form-section-title"><i class="bi bi-tag" aria-hidden="true"></i> Identity</h2>
+    <p class="form-section-desc">How you'll recognise this device in lists and search.</p>
+    <div class="row g-3">
+      <div class="col-sm-7">
+        <label class="form-label" for="hostname">Hostname</label>
+        <input type="text" class="form-control" id="hostname" name="hostname" required maxlength="255"
+               value="{{ device.hostname if device and device.hostname else '' }}" placeholder="e.g. pve-01" autocomplete="off" {% if not is_edit %}autofocus{% endif %}
+               aria-describedby="hostnameHelp">
+        <div class="invalid-feedback">Give the device a name.</div>
+        <div id="hostnameHelp" class="form-text">Unique name on your network.</div>
+      </div>
+      <div class="col-sm-5">
+        <label class="form-label" for="device_type">Type</label>
+        <select class="form-select" id="device_type" name="device_type" required>
+          <option value="" disabled {% if not device or not device.device_type %}selected{% endif %}>Choose a type…</option>
+          {% for t in types %}
+            <option value="{{ t }}" {% if device and device.device_type == t %}selected{% endif %}>{{ 'Access point' if t == 'AccessPoint' else t }}</option>
+          {% endfor %}
+          {% if device and device.device_type and device.device_type not in types %}
+            <option value="{{ device.device_type }}" selected>{{ device.device_type }}</option>
+          {% endif %}
+        </select>
+        <div class="invalid-feedback">Pick a type.</div>
+      </div>
+      <div class="col-12">
+        <label class="form-label" for="location">Location <span class="optional">optional</span></label>
+        <input type="text" class="form-control" id="location" name="location" list="locationOptions" maxlength="100"
+               value="{{ device.location if device and device.location else '' }}" placeholder="e.g. Rack A1, Home office, pve-01" aria-describedby="locationHelp">
+        <datalist id="locationOptions">{% for loc in known_locations %}<option value="{{ loc }}">{% endfor %}</datalist>
+        <div id="locationHelp" class="form-text">Physical or logical place. Existing locations are suggested as you type.</div>
+      </div>
     </div>
+  </div>
 
-    <!-- IP Address -->
-    <div class="mb-3">
-      <label class="form-label">IP Address
-        <span class="help-icon" data-toggle="tooltip" title="IPv4 or IPv6 address assigned to the device (e.g. 192.168.1.10).">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="ip_address" value="{{ device.ip_address if device else '' }}">
+  <div class="form-section">
+    <h2 class="form-section-title"><i class="bi bi-diagram-2" aria-hidden="true"></i> Network</h2>
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label" for="ip_address">IP address <span class="optional">optional</span></label>
+        <input type="text" class="form-control mono" id="ip_address" name="ip_address" maxlength="45" inputmode="decimal" autocomplete="off"
+               value="{{ device.ip_address if device and device.ip_address else '' }}" placeholder="192.168.1.10"
+               pattern="^((25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}|[0-9A-Fa-f:.]*:[0-9A-Fa-f:.]*)(\/\d{1,3})?$">
+        <div class="invalid-feedback">Enter a valid IPv4 or IPv6 address.</div>
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="mac_address">MAC address <span class="optional">optional</span></label>
+        <input type="text" class="form-control mono" id="mac_address" name="mac_address" maxlength="45" autocomplete="off"
+               value="{{ device.mac_address if device and device.mac_address else '' }}" placeholder="00:15:5D:63:09:00"
+               pattern="^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$|^([0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4}$">
+        <div class="invalid-feedback">Use the format 00:15:5D:63:09:00.</div>
+      </div>
     </div>
-    
-    <!-- MAC Address -->
-    <div class="mb-3">
-      <label class="form-label">MAC Address
-        <span class="help-icon" data-toggle="tooltip" title="MAC address assigned to the device (e.g. 00:15:5D:63:09:00).">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="mac_address" value="{{ device.mac_address if device else '' }}">
+  </div>
+
+  <div class="form-section">
+    <h2 class="form-section-title"><i class="bi bi-cpu" aria-hidden="true"></i> System</h2>
+    <div class="row g-3">
+      <div class="col-sm-7">
+        <label class="form-label" for="operating_system">Operating system <span class="optional">optional</span></label>
+        <input type="text" class="form-control" id="operating_system" name="operating_system" list="osOptions" maxlength="100"
+               value="{{ device.operating_system if device and device.operating_system else '' }}" placeholder="e.g. Proxmox VE, Ubuntu, Windows Server" aria-describedby="osHelp">
+        <datalist id="osOptions">
+          {% for os_name in (known_os + ['Proxmox VE', 'Ubuntu', 'Debian', 'Windows Server', 'Windows 11', 'TrueNAS SCALE', 'UniFi OS', 'pfSense', 'OPNsense']) | unique %}<option value="{{ os_name }}">{% endfor %}
+        </datalist>
+        <div id="osHelp" class="form-text">Set this to "Proxmox VE" to enable live host details.</div>
+      </div>
+      <div class="col-sm-5">
+        <label class="form-label" for="os_version">Version <span class="optional">optional</span></label>
+        <input type="text" class="form-control" id="os_version" name="os_version" maxlength="50"
+               value="{{ device.os_version if device and device.os_version else '' }}" placeholder="e.g. 8.2, 24.04 LTS">
+      </div>
     </div>
+  </div>
 
-    <!-- Device Type -->
-    <div class="mb-3">
-      <label class="form-label">Device Type
-        <span class="help-icon" data-toggle="tooltip" title="Category of device (e.g. Router, Switch, Server, VM).">(?)</span>
-      </label>
-      <select class="form-select" name="device_type" required>
-        {% set types = [
-          'Desktop', 'Laptop', 'Server', 'Switch', 'Router', 'AccessPoint', 'Printer', 'Firewall', 'NAS', 'IoT', 'VM', 'Phone', 'Tablet', 'Camera', 'Other'] %}
-        <option value="" disabled {% if not device or not device.device_type %}selected{% endif %}>Select type…</option>
-        {% for t in types %}
-          <option value="{{ t }}" {% if device and device.device_type == t %}selected{% endif %}>{{ t }}</option>
-        {% endfor %}
-        {% if device and device.device_type and device.device_type not in types %}
-          <option value="{{ device.device_type }}" selected>{{ device.device_type }}</option>
-        {% endif %}
-      </select>
+  <div class="form-section">
+    <h2 class="form-section-title"><i class="bi bi-upc-scan" aria-hidden="true"></i> Asset</h2>
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label" for="serial_number">Serial number <span class="optional">optional</span></label>
+        <input type="text" class="form-control mono" id="serial_number" name="serial_number" maxlength="100" autocomplete="off"
+               value="{{ device.serial_number if device and device.serial_number else '' }}">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="license_key">License key or asset tag <span class="optional">optional</span></label>
+        <input type="text" class="form-control mono" id="license_key" name="license_key" maxlength="255" autocomplete="off"
+               value="{{ device.license_key if device and device.license_key else '' }}">
+      </div>
     </div>
+  </div>
 
-    <!-- Operating System -->
-    <div class="mb-3">
-      <label class="form-label">Operating System
-        <span class="help-icon" data-toggle="tooltip" title="Name of the OS running on the device (e.g. Ubuntu, Windows Server).">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="operating_system" value="{{ device.operating_system if device else '' }}">
-    </div>
-
-    <!-- OS Version -->
-    <div class="mb-3">
-      <label class="form-label">OS Version
-        <span class="help-icon" data-toggle="tooltip" title="Specific OS version (e.g. 20.04 LTS, 2019 Datacenter).">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="os_version" value="{{ device.os_version if device else '' }}">
-    </div>
-
-    <!-- Serial Number -->
-    <div class="mb-3">
-      <label class="form-label">Serial Number
-        <span class="help-icon" data-toggle="tooltip" title="Manufacturer’s serial number for inventory tracking.">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="serial_number" value="{{ device.serial_number if device else '' }}">
-    </div>
-
-    <!-- License Key -->
-    <div class="mb-3">
-      <label class="form-label">License Key
-        <span class="help-icon" data-toggle="tooltip" title="Software license key or asset tag associated with the device.">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="license_key" value="{{ device.license_key if device else '' }}">
-    </div>
-
-    <!-- Location -->
-    <div class="mb-3">
-      <label class="form-label">Location
-        <span class="help-icon" data-toggle="tooltip" title="Physical or logical location (e.g. Home Office, Rack A1).">(?)</span>
-      </label>
-      <input type="text" class="form-control" name="location" value="{{ device.location if device else '' }}">
-    </div>
-
-    <button type="submit" class="btn btn-success">Save</button>
-    <a href="{{ url_for('devices.list_devices') }}" class="btn btn-secondary">Cancel</a>
-  </form>
-
-  {% if device and not clone and related_notes %}
-    <hr>
-    <h4>Linked Notes</h4>
-    {% if related_notes %}
-      <ul class="list-group mt-2">
-        {% for note in related_notes %}
-          <li class="list-group-item">
-            <a href="{{ url_for('notes.view_note', filename=note) }}">{{ note[:-3] }}</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% else %}
-      <div class="alert alert-light mt-2">No linked notes.</div>
-    {% endif %}
-  {% endif %}
-
-  {% if device and not clone %}
-    <a class="btn btn-outline-primary mt-3" href="{{ url_for('devices.clone_device', id=device.id) }}">Clone Device</a>
-  {% endif %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> {{ 'Save changes' if is_edit else 'Add device' }}</button>
+    <a href="{{ url_for('devices.view_device', id=device.id) if is_edit else (url_for('devices.view_device', id=source.id) if clone else url_for('devices.list_devices')) }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 </div>
 {% endblock %}
 
 {% block scripts %}
-  {{ super() }}
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
-      tooltipTriggerList.forEach(function(el) {
-        new bootstrap.Tooltip(el);
-      });
-    });
-  </script>
+<script>
+  // Native constraint validation with Bootstrap styling, shown only after a submit attempt.
+  document.querySelectorAll('form[novalidate]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      if (!form.checkValidity()) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        form.classList.add('was-validated');
+        var first = form.querySelector(':invalid'); if (first) first.focus();
+      }
+    }, true);
+  });
+</script>
 {% endblock %}

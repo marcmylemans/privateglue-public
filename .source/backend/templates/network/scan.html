@@ -1,56 +1,77 @@
 {% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% block title %}SNMP · {{ device.hostname }} · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), (device.hostname, url_for('devices.view_device', id=device.id)), ('Interfaces & VLANs', None)]) }}{% endblock %}
+
 {% block content %}
-  <h2>SNMP Scan: {{ device.hostname }}</h2>
+{% call ui.page_header('Interfaces & VLANs', 'Read over SNMP from ' ~ device.hostname ~ (' (' ~ device.ip_address ~ ')' if device.ip_address else ''), icon='diagram-3') %}
+  <a href="{{ url_for('network.scan_device', device_id=device.id) }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Refresh</a>
+{% endcall %}
 
-  <dl class="row">
-    <dt class="col-sm-3">System Description</dt>
-    <dd class="col-sm-9">{{ data.sys_descr or "N/A" }}</dd>
+<section class="panel" aria-labelledby="sysTitle">
+  <div class="panel-header"><h2 class="panel-title" id="sysTitle"><i class="bi bi-info-circle" aria-hidden="true"></i> System</h2></div>
+  <div class="panel-body">
+    <dl class="facts">
+      {{ ui.fact('Description', data.sys_descr) }}
+      {{ ui.fact('Uptime', data.sys_uptime, mono=True) }}
+      {{ ui.fact('Interfaces', data.interfaces | length) }}
+      {{ ui.fact('VLANs', data.vlans | length) }}
+    </dl>
+  </div>
+</section>
 
-    <dt class="col-sm-3">System Uptime</dt>
-    <dd class="col-sm-9">{{ data.sys_uptime or "N/A" }}</dd>
-  </dl>
-
-  <h4>Interfaces</h4>
-  <table class="table table-sm">
-    <thead>
-      <tr><th>#</th><th>Name</th><th>Status</th><th>PVID (Untagged VLAN)</th></tr>
-    </thead>
-    <tbody>
-      {% for iface in data.interfaces %}
-      <tr>
-        <td>{{ iface.index }}</td>
-        <td>{{ iface.name }}</td>
-        <td>
-          {% if iface.status == 1 %}Up{% else %}Down{% endif %}
-        </td>
-        <td>
-          {% set pvid = data.port_pvid[iface.index | int] %}
-          {{ pvid }}
-          {% set vlan = (data.vlans | selectattr('vlan_id', 'equalto', pvid) | list).0 %}
-          {% if vlan %} ({{ vlan.name }}){% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  <h4>VLANs</h4>
-    <table class="table table-sm">
-    <thead><tr><th>ID</th><th>Name</th><th>Untagged Ports</th><th>Tagged Ports</th></tr></thead>
-    <tbody>
-    {% for vlan in data.vlans %}
-        <tr>
-        <td>{{ vlan.vlan_id }}</td>
-        <td>{{ vlan.name }}</td>
-        <td>
-            {% set untagged = data.vlan_port_types[vlan.vlan_id]['untagged'] %}
-            {{ untagged | join(', ') or 'None' }}
-        </td>
-        <td>
-            {% set tagged = data.vlan_port_types[vlan.vlan_id]['tagged'] %}
-            {{ tagged | join(', ') or 'None' }}
-        </td>
+{% set up_count = data.interfaces | selectattr('status', 'equalto', 1) | list | length %}
+<h2 class="search-group-title"><i class="bi bi-ethernet" aria-hidden="true"></i> Interfaces <span class="count-pill">{{ up_count }} up / {{ data.interfaces|length }}</span></h2>
+<div class="toolbar">
+  <div class="search-field">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label for="ifFilter" class="visually-hidden">Filter interfaces</label>
+    <input type="search" id="ifFilter" class="form-control" placeholder="Filter by name, status or VLAN…" data-filter-target="#ifTable" data-filter-count="#ifCount" data-filter-noun="interfaces">
+  </div>
+  <span class="result-count" id="ifCount" aria-live="polite"></span>
+</div>
+<div class="table-panel mb-2">
+  <div class="table-responsive">
+    <table class="table pg-table" id="ifTable">
+      <thead><tr><th scope="col">#</th><th scope="col">Name</th><th scope="col">Status</th><th scope="col">Untagged VLAN (PVID)</th></tr></thead>
+      <tbody>
+        {% for iface in data.interfaces %}
+        {% set pvid = data.port_pvid.get(iface.index | int) if data.port_pvid else None %}
+        {% set vlan = (data.vlans | selectattr('vlan_id', 'equalto', pvid) | list | first) if pvid else None %}
+        <tr data-filter-text="{{ iface.name }} {{ 'up' if iface.status == 1 else 'down' }} {{ pvid or '' }} {{ vlan.name if vlan else '' }}">
+          <td class="mono small text-body-secondary">{{ iface.index }}</td>
+          <td class="fw-semibold">{{ iface.name }}</td>
+          <td><span class="status-dot {{ 'ok' if iface.status == 1 else 'bad' }} me-1" aria-hidden="true"></span>{{ 'Up' if iface.status == 1 else 'Down' }}</td>
+          <td>{% if pvid %}<span class="mono">{{ pvid }}</span>{% if vlan %} <span class="text-body-secondary">{{ vlan.name }}</span>{% endif %}{% else %}<span class="text-body-tertiary">–</span>{% endif %}</td>
         </tr>
-    {% endfor %}
-    </tbody>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-body-secondary py-4">No interfaces returned.</td></tr>
+        {% endfor %}
+        <tr class="filter-empty" hidden><td colspan="4">No interfaces match.</td></tr>
+      </tbody>
     </table>
+  </div>
+</div>
+
+<h2 class="search-group-title"><i class="bi bi-tags" aria-hidden="true"></i> VLANs <span class="count-pill">{{ data.vlans|length }}</span></h2>
+<div class="table-panel">
+  <div class="table-responsive">
+    <table class="table pg-table">
+      <thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Untagged ports</th><th scope="col">Tagged ports</th></tr></thead>
+      <tbody>
+        {% for vlan in data.vlans %}
+        {% set types = data.vlan_port_types.get(vlan.vlan_id, {}) if data.vlan_port_types else {} %}
+        <tr>
+          <td class="mono fw-semibold">{{ vlan.vlan_id }}</td>
+          <td>{{ vlan.name }}</td>
+          <td class="small">{{ (types.get('untagged') or []) | join(', ') or '–' }}</td>
+          <td class="small">{{ (types.get('tagged') or []) | join(', ') or '–' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-body-secondary py-4">No VLANs returned.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

@@ -1,37 +1,45 @@
 {% extends "base.html" %}
-{% block title %}Edit User - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Edit {{ user.username }} · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Users', url_for('admin.list_users')), (user.username, None)]) }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">Edit User: {{ user.username }}</h2>
+<div class="narrow-page">
+{{ ui.page_header('Edit ' ~ user.username, icon='person-gear') }}
 
-  <form method="POST">
-    <div class="mb-3">
-      <label for="role" class="form-label">Role</label>
-      <select class="form-select" name="role" id="role" required>
-        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
-        <option value="editor" {% if user.role == 'editor' %}selected{% endif %}>Editor</option>
-        <option value="readonly" {% if user.role == 'readonly' %}selected{% endif %}>Read-only</option>
-      </select>
+<form method="POST" class="panel">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <fieldset class="form-section">
+    <legend class="form-label fs-6">Role</legend>
+    {% for value, desc in [('readonly', 'Can view everything, including passwords, but change nothing.'), ('editor', 'Can add and edit devices, notes and credentials.'), ('admin', 'Full access, including users, deletes and backups.')] %}
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="radio" name="role" id="role-{{ value }}" value="{{ value }}" {% if user.role == value %}checked{% endif %} required>
+      <label class="form-check-label" for="role-{{ value }}">{{ ui.role_badge(value) }} <span class="small text-body-secondary ms-1">{{ desc }}</span></label>
     </div>
+    {% endfor %}
+    {% if user.id == current_user.id %}
+      <div class="form-text"><i class="bi bi-info-circle" aria-hidden="true"></i> This is your own account. Demoting yourself removes your access to this page.</div>
+    {% endif %}
+  </fieldset>
 
-    <div class="mb-3">
-      <label for="new_password" class="form-label">New Password (optional)</label>
-      <input type="password" class="form-control" id="new_password" name="new_password" placeholder="Leave blank to keep current password">
+  <div class="form-section">
+    <label for="new_password" class="form-label">New password <span class="optional">optional, leave blank to keep the current one</span></label>
+    <div class="input-group">
+      <input type="password" class="form-control" id="new_password" name="new_password" autocomplete="new-password" minlength="8"
+             data-pw-strength="#passwordFeedback" aria-describedby="passwordFeedback">
+      <button type="button" class="btn btn-outline-secondary" data-pw-toggle="#new_password" aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
     </div>
+    {{ ui.password_feedback('passwordFeedback') }}
+    <div class="form-check mt-3">
+      <input class="form-check-input" type="checkbox" value="1" id="force_password_reset" name="force_password_reset" {% if user.force_password_reset %}checked{% endif %}>
+      <label class="form-check-label" for="force_password_reset">Require a new password at next sign-in</label>
+    </div>
+  </div>
 
-    <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" value="1" id="force_password_reset" name="force_password_reset"
-        {% if user.force_password_reset %}checked{% endif %}>
-      <label class="form-check-label" for="force_password_reset">
-        Force password reset at next login
-      </label>
-    </div>
-
-    <div class="d-flex gap-2">
-      <button type="submit" class="btn btn-success">Save Changes</button>
-      <a href="{{ url_for('admin.list_users') }}" class="btn btn-secondary">Cancel</a>
-    </div>
-  </form>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Save changes</button>
+    <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
 </div>
 {% endblock %}

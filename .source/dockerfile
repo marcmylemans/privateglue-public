@@ -2,12 +2,37 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY backend/ /app/backend
-#COPY notes/ /app/notes
+# Create non-root user and group
+RUN groupadd --system --gid 1000 appgroup \
+    && useradd --system --uid 1000 --gid appgroup --home /app --no-create-home appuser
+
 COPY requirements.txt /app
-
-ENV PYTHONPATH="${PYTHONPATH}:/app"
-
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD ["python", "backend/app.py"]
+COPY backend/ /app/backend
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Data, notes, backups, and secret dirs are bind/volume mounted in docker-compose.
+# Pre-create them so they exist on first run with correct ownership.
+RUN mkdir -p /app/data /app/notes /app/backups /app/secret \
+    && chown -R appuser:appgroup /app \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Set by CI from the git tag or commit, shown in the app footer and System page.
+ARG APP_VERSION=""
+ENV PYTHONPATH="${PYTHONPATH}:/app" \
+    PYTHONUNBUFFERED=1 \
+    APP_VERSION=${APP_VERSION}
+
+# No "USER appuser" here on purpose: the entrypoint starts as root only to fix ownership
+# of the data folders (needed when upgrading from older images that ran as root), then
+# drops to appuser before the app starts. The app itself never runs as root.
+
+EXPOSE 5000
+
+# Built-in health check (the image has no curl, so use Python).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5000/healthz', timeout=5)"
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--access-logfile", "-", "--error-logfile", "-", "backend.app:app"]

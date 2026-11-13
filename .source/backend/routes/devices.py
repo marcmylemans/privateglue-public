@@ -3,7 +3,7 @@ import io, csv
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, jsonify, abort
 from flask_login import login_required
-from backend.extensions import db
+from backend.extensions import db, limiter
 from backend.models.devices import Device
 from backend.routes.notes import get_notes_linked_to_device
 from backend.models.credentials import Credential
@@ -20,14 +20,10 @@ discovered_devices_cache = []  # In-memory cache for demo; use DB for production
 
 API_KEY_PATH = os.path.join(os.path.dirname(__file__), '../../data/probe_api_key.txt')
 def get_or_create_probe_api_key():
-    if os.path.exists(API_KEY_PATH):
-        with open(API_KEY_PATH, 'r') as f:
-            return f.read().strip()
-    key = secrets.token_urlsafe(32)
-    os.makedirs(os.path.dirname(API_KEY_PATH), exist_ok=True)
-    with open(API_KEY_PATH, 'w') as f:
-        f.write(key)
-    return key
+    # Atomic create-or-read, so concurrent gunicorn workers all end up with the same key.
+    from backend.utils.encryption import load_or_create_secret_file
+    path = os.path.normpath(API_KEY_PATH)
+    return load_or_create_secret_file(path, lambda: secrets.token_urlsafe(32).encode()).decode()
 API_KEY = get_or_create_probe_api_key()
 
 # --- ROUTES ---
@@ -70,7 +66,7 @@ def list_devices():
     if filter_location:
         query = query.filter(Device.location == filter_location)
 
-    devices = query.all()
+    devices = query.order_by(db.func.lower(Device.hostname)).all()
 
     all_types = db.session.query(Device.device_type).distinct().all()
     all_locations = db.session.query(Device.location).distinct().all()
@@ -87,10 +83,34 @@ def list_devices():
         devices=devices,
         filter_type=filter_type,
         filter_location=filter_location,
-        all_types=[t[0] for t in all_types if t[0]],
-        all_locations=[l[0] for l in all_locations if l[0]],
+        all_types=sorted(t[0] for t in all_types if t[0]),
+        all_locations=sorted(l[0] for l in all_locations if l[0]),
         discovered_count=discovered_count
     )
+
+
+DEVICE_FIELDS = [
+    "hostname", "ip_address", "mac_address", "device_type", "operating_system",
+    "os_version", "serial_number", "license_key", "location",
+]
+
+
+def _device_form_context(**extra):
+    """Values used by the device form for autocomplete suggestions."""
+    def distinct(col):
+        return sorted({v for (v,) in db.session.query(col).distinct() if v})
+    ctx = {
+        "known_locations": distinct(Device.location),
+        "known_os": distinct(Device.operating_system),
+    }
+    ctx.update(extra)
+    return ctx
+
+
+def _apply_device_form(device):
+    for field in DEVICE_FIELDS:
+        value = (request.form.get(field) or "").strip()
+        setattr(device, field, value or None)
 
 
 @devices_bp.route("/devices/add", methods=["GET", "POST"])
@@ -98,22 +118,17 @@ def list_devices():
 @editor_required
 def add_device():
     if request.method == "POST":
-        device = Device(
-            hostname         = request.form["hostname"],
-            ip_address       = request.form.get("ip_address"),
-            mac_address      = request.form.get("mac_address"),
-            device_type      = request.form["device_type"],
-            operating_system = request.form.get("operating_system"),
-            os_version       = request.form.get("os_version"),
-            serial_number    = request.form.get("serial_number"),
-            license_key      = request.form.get("license_key"),
-            location         = request.form.get("location"),
-        )
+        device = Device()
+        _apply_device_form(device)
+        if not device.hostname:
+            flash("Hostname is required.", "danger")
+            return render_template("devices/form.html", **_device_form_context(device=device, is_new=True))
         db.session.add(device)
         db.session.commit()
-        return redirect(url_for("devices.list_devices"))
+        flash(f"Device '{device.hostname}' added.", "success")
+        return redirect(url_for("devices.view_device", id=device.id))
 
-    return render_template("devices/form.html", device=None)
+    return render_template("devices/form.html", **_device_form_context(device=None))
 
 
 @devices_bp.route("/devices/edit/<int:id>", methods=["GET", "POST"])
@@ -123,21 +138,16 @@ def edit_device(id):
     device = Device.query.get_or_404(id)
 
     if request.method == "POST":
-        device.hostname         = request.form["hostname"]
-        device.ip_address       = request.form.get("ip_address")
-        device.mac_address      = request.form.get("mac_address")
-        device.device_type      = request.form["device_type"]
-        device.operating_system = request.form.get("operating_system")
-        device.os_version       = request.form.get("os_version")
-        device.serial_number    = request.form.get("serial_number")
-        device.license_key      = request.form.get("license_key")
-        device.location         = request.form.get("location")
-
+        _apply_device_form(device)
+        if not device.hostname:
+            db.session.rollback()
+            flash("Hostname is required.", "danger")
+            return redirect(url_for("devices.edit_device", id=id))
         db.session.commit()
-        return redirect(url_for("devices.list_devices"))
+        flash(f"Device '{device.hostname}' saved.", "success")
+        return redirect(url_for("devices.view_device", id=device.id))
 
-    related_notes = get_notes_linked_to_device(device.id)
-    return render_template("devices/form.html", device=device, related_notes=related_notes)
+    return render_template("devices/form.html", **_device_form_context(device=device))
 
 
 @devices_bp.route("/devices/clone/<int:id>", methods=["GET"])
@@ -157,7 +167,7 @@ def clone_device(id):
         license_key      = device.license_key,
         location         = device.location,
     )
-    return render_template("devices/form.html", device=clone, clone=True)
+    return render_template("devices/form.html", **_device_form_context(device=clone, clone=True, source=device))
 
 
 @devices_bp.route("/devices/delete/<int:id>", methods=["POST"])
@@ -165,8 +175,11 @@ def clone_device(id):
 @admin_required
 def delete_device(id):
     device = Device.query.get_or_404(id)
+    hostname = device.hostname
+    device.credentials = []
     db.session.delete(device)
     db.session.commit()
+    flash(f"Device '{hostname}' deleted.", "success")
     return redirect(url_for("devices.list_devices"))
 
 
@@ -176,31 +189,41 @@ def delete_device(id):
 def view_device(id):
     device = Device.query.get_or_404(id)
     linked_notes = get_notes_linked_to_device(device.id)
-    credentials = device.credentials  # ✅ FIXED here
-
-    # --- SNMP support for eligible device types ---
-    SNMP_TYPES = {"switch", "router", "accesspoint", "firewall"}
-    snmp_available = False
-    snmp_error = None
-    if device.device_type and device.device_type.lower() in SNMP_TYPES and device.ip_address:
-        try:
-            from backend.utils.snmp import snmp_get
-            sys_descr = snmp_get(device.ip_address, "1.3.6.1.2.1.1.1.0")
-            sys_uptime = snmp_get(device.ip_address, "1.3.6.1.2.1.1.3.0")
-            if sys_descr or sys_uptime:
-                snmp_available = True
-        except Exception as e:
-            snmp_error = str(e)
+    credentials = device.credentials
 
     return render_template(
         "devices/view.html",
         device=device,
         linked_notes=linked_notes,
         credentials=credentials,
-        snmp_available=snmp_available,
-        snmp_error=snmp_error,
-        SNMP_TYPES=SNMP_TYPES
+        snmp_eligible=_snmp_eligible(device),
+        is_proxmox=(device.operating_system or "").lower() in ("proxmox", "proxmox ve"),
     )
+
+
+SNMP_TYPES = {"switch", "router", "accesspoint", "firewall"}
+
+
+def _snmp_eligible(device):
+    return bool(device.device_type and device.device_type.lower() in SNMP_TYPES)
+
+
+@devices_bp.route("/devices/<int:id>/snmp-status")
+@login_required
+@readonly_required
+def snmp_status(id):
+    """Checked asynchronously by the device page so an unreachable host never slows it down."""
+    device = Device.query.get_or_404(id)
+    if not _snmp_eligible(device) or not device.ip_address:
+        return jsonify({"available": False, "reason": "not-eligible"})
+    try:
+        from backend.utils.snmp import snmp_get
+        # snmp_get() takes no timeout/retries arguments; passing them raised a TypeError
+        # that was swallowed, so SNMP never showed as available before.
+        sys_descr = snmp_get(device.ip_address, "1.3.6.1.2.1.1.1.0")
+        return jsonify({"available": sys_descr is not None})
+    except Exception:
+        return jsonify({"available": False})
 
 
 @devices_bp.route("/devices/<int:id>/credentials/add", methods=["GET", "POST"])
@@ -208,6 +231,8 @@ def view_device(id):
 @editor_required
 def add_credential(id):
     device = Device.query.get_or_404(id)
+    if request.method == "GET":
+        return redirect(url_for("credentials.add_credential", device_id=device.id))
     if request.method == "POST":
         credential = Credential(
             title=request.form["title"],
@@ -271,7 +296,7 @@ def delete_credential(id, cred_id):
 @readonly_required
 def fetch_device_info(id):
     device = Device.query.get_or_404(id)
-    if device.operating_system.lower() not in ('proxmox', 'proxmox ve'):
+    if (device.operating_system or "").lower() not in ('proxmox', 'proxmox ve'):
         flash("Fetch only supported for Proxmox devices.", "warning")
         return redirect(url_for('devices.view_device', id=id))
 
@@ -389,11 +414,16 @@ def import_devices_template():
     )
 
 @devices_bp.route('/api/discovered-devices', methods=['POST'])
+@limiter.limit("30 per minute")
 def api_discovered_devices():
     if request.headers.get("X-API-KEY") != API_KEY:
         abort(401)
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     devices = data.get('devices', [])
+    if not isinstance(devices, list):
+        abort(400)
+    if len(devices) > 5000:
+        abort(413)
     global discovered_devices_cache
     discovered_devices_cache = devices
     return jsonify({'status': 'ok', 'count': len(devices)})

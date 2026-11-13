@@ -1,70 +1,66 @@
 {% extends "base.html" %}
-{% block title %}About - PrivateGlue{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}System &amp; backups · {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-  <h2 class="mb-4">System Information</h2>
-  <div class="card">
-    <div class="card-body">
-      <table class="table table-hover">
-        <tbody>
-          {% for key, value in system_info.items() %}
-            <tr>
-              <th>{{ key }}</th>
-              <td>
-                {% if key == 'API Key for Probe' %}
-                  <span id="probeApiKey">{{ value }}</span>
-                  <button class="btn btn-sm btn-outline-secondary ms-2" type="button" onclick="copyProbeApiKey()">Copy</button>
-                {% else %}
-                  {{ value }}
-                {% endif %}
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <hr>
-      <p>
-        View the <a href="https://github.com/marcmylemans/privateglue-public" target="_blank">GitHub repository</a> or check the <a href="https://github.com/marcmylemans/privateglue-public/blob/main/.source/documentation/ROADMAP.md" target="_blank">project roadmap</a>.
-      </p>
+{{ ui.page_header('System & backups', 'Instance information and backup archives.', icon='hdd-stack') }}
+
+<div class="row g-3 mb-3">
+  {% for label, value in counts.items() %}
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <span class="stat-icon tone-brand"><i class="bi bi-{{ {'Users': 'people', 'Devices': 'hdd-network', 'Notes': 'journal-text', 'Credentials': 'key'}[label] }}" aria-hidden="true"></i></span>
+      <span><span class="stat-value d-block">{{ value }}</span><span class="stat-label">{{ label }}</span></span>
     </div>
   </div>
+  {% endfor %}
 </div>
-<script>
-function copyProbeApiKey() {
-  const el = document.getElementById('probeApiKey');
-  if (!el) return;
-  const text = el.innerText;
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(text).then(() => showCopyAlert()).catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
-  }
-}
-function fallbackCopy(text) {
-  const textarea = document.createElement('textarea');
-  textarea.value = text;
-  document.body.appendChild(textarea);
-  textarea.select();
-  try {
-    document.execCommand('copy');
-    showCopyAlert();
-  } catch (err) {
-    alert('Copy failed: ' + err);
-  }
-  document.body.removeChild(textarea);
-}
-function showCopyAlert() {
-  let alert = document.getElementById('copyAlert');
-  if (!alert) {
-    alert = document.createElement('div');
-    alert.id = 'copyAlert';
-    alert.className = 'alert alert-success mt-2';
-    alert.innerText = 'Copied!';
-    document.getElementById('probeApiKey').parentElement.appendChild(alert);
-  }
-  alert.classList.remove('d-none');
-  setTimeout(() => alert.classList.add('d-none'), 1500);
-}
-</script>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <section class="panel h-100" aria-labelledby="sysTitle">
+      <div class="panel-header"><h2 class="panel-title" id="sysTitle"><i class="bi bi-info-circle" aria-hidden="true"></i> System information</h2></div>
+      <div class="panel-body">
+        <dl class="facts" style="grid-template-columns: 1fr">
+          {% for key, value in system_info.items() %}
+            <div class="fact d-flex justify-content-between gap-3 border-bottom pb-2">
+              <dt class="m-0">{{ key }}</dt>
+              <dd class="text-end {{ 'mono' if key in ['App version', 'Hostname', 'Python', 'Server time'] }}">{{ value }}</dd>
+            </div>
+          {% endfor %}
+        </dl>
+        <p class="small text-body-secondary mt-3 mb-0">
+          <a href="https://github.com/marcmylemans/privateglue-public" target="_blank" rel="noopener">GitHub repository</a> ·
+          <a href="https://github.com/marcmylemans/privateglue-public/blob/main/.source/documentation/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a>
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-lg-6">
+    <section class="panel h-100" aria-labelledby="backupsTitle" id="backups">
+      <div class="panel-header">
+        <h2 class="panel-title" id="backupsTitle"><i class="bi bi-archive" aria-hidden="true"></i> Backups <span class="count-pill">{{ backups|length }}</span></h2>
+        <a href="{{ url_for('admin.create_backup') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create backup</a>
+      </div>
+      {% if backups %}
+      <ul class="item-list">
+        {% for b in backups %}
+        <li>
+          <span class="item-icon"><i class="bi bi-file-earmark-zip" aria-hidden="true"></i></span>
+          <div class="item-main">
+            <span class="item-title mono">{{ b.name }}</span>
+            <span class="item-meta">{{ b.mtime | timeago }} · {{ (b.size / 1024) | round(1) }} KB</span>
+          </div>
+          <a href="{{ url_for('admin.download_backup', filename=b.name) }}" class="btn btn-outline-secondary btn-sm" aria-label="Download {{ b.name }}"><i class="bi bi-download" aria-hidden="true"></i><span class="d-none d-sm-inline">Download</span></a>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+        {{ ui.empty_state('archive', 'No backups yet', 'A backup contains the database, the encryption key and all notes. Store it somewhere safe: it can decrypt your credentials.') }}
+      {% endif %}
+      <div class="panel-footer small text-body-secondary"><i class="bi bi-shield-exclamation" aria-hidden="true"></i> Backups include the encryption key. Keep them as safe as the credentials themselves.</div>
+    </section>
+  </div>
+</div>
 {% endblock %}

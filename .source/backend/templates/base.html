@@ -1,162 +1,184 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="auto">
+<html lang="en" data-bs-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}PrivateGlue{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="color-scheme" content="light dark">
+  <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+  <script>
+    /* Apply the saved theme before first paint so the page never flashes the wrong colours. */
+    (function () {
+      var legacy = localStorage.getItem('theme');
+      var pref = localStorage.getItem('pg-theme') || legacy || 'auto';
+      var dark = pref === 'dark' || (pref === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
+    })();
+  </script>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+  {% block head %}{% endblock %}
 </head>
-<body>
+{% set nav = active_nav | default(request.endpoint.split('.')[0] if request.endpoint else '') %}
+<body class="{{ 'layout-bare' if bare_layout else 'layout-app' }}">
+  <a class="skip-link" href="#main">Skip to content</a>
+
   {% if DEMO_MODE %}
-<div class="alert alert-warning text-center mb-0 rounded-0" role="alert" style="z-index: 1050;">
-  This is a demo instance. All data resets hourly. Not for production use.
-</div>
-{% endif %}
+  <div class="demo-banner" role="note">
+    <i class="bi bi-info-circle" aria-hidden="true"></i>
+    Demo instance: all data resets hourly. Not for production use.
+  </div>
+  {% endif %}
 
+  {% if bare_layout or not current_user.is_authenticated %}
+  {# ---------- Bare layout: login, setup, password change ---------- #}
+  <main id="main" class="bare-main">
+    <div class="bare-brand">
+      <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="40" height="40">
+      <span>{{ APP_NAME }}</span>
+    </div>
+    {% block bare_content %}{% block content %}{% endblock %}{% endblock %}
+    <p class="bare-footer">
+      <a href="https://github.com/marcmylemans/privateglue-public" target="_blank" rel="noopener">GitHub</a>
+      {% if APP_VERSION %}<span aria-hidden="true">·</span> v{{ APP_VERSION }}{% endif %}
+    </p>
+  </main>
+  {% else %}
+  {# ---------- App layout ---------- #}
+  <div class="app-shell">
+    <aside class="app-sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="appSidebar" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <a href="{{ url_for('index') }}" class="d-flex align-items-center gap-2 text-decoration-none">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="30" height="30">
+          <span class="fw-semibold">{{ APP_NAME }}</span>
+        </a>
+        <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#appSidebar" aria-label="Close menu"></button>
+      </div>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-semibold" href="{{ url_for('index') }}">PrivateGlue</a>
+      <nav class="sidebar-nav">
+        {% macro nav_link(endpoint, key, icon, label) -%}
+          <a class="nav-link{% if nav == key %} active{% endif %}" href="{{ url_for(endpoint) }}"{% if nav == key %} aria-current="page"{% endif %}>
+            <i class="bi bi-{{ icon }}" aria-hidden="true"></i><span>{{ label }}</span>
+          </a>
+        {%- endmacro %}
+        {{ nav_link('index', 'index', 'grid-1x2', 'Dashboard') }}
+        <div class="nav-section">Inventory</div>
+        {{ nav_link('devices.list_devices', 'devices', 'hdd-network', 'Devices') }}
+        {{ nav_link('notes.list_notes', 'notes', 'journal-text', 'Notes') }}
+        {{ nav_link('credentials.list_credentials', 'credentials', 'key', 'Credentials') }}
+        {% if is_admin %}
+        <div class="nav-section">Administration</div>
+        <a class="nav-link{% if request.endpoint in ['admin.list_users', 'admin.create_user', 'admin.edit_user', 'admin.reset_user_password'] %} active{% endif %}" href="{{ url_for('admin.list_users') }}">
+          <i class="bi bi-people" aria-hidden="true"></i><span>Users</span>
+        </a>
+        <a class="nav-link{% if request.endpoint == 'admin.about_page' %} active{% endif %}" href="{{ url_for('admin.about_page') }}">
+          <i class="bi bi-hdd-stack" aria-hidden="true"></i><span>System &amp; backups</span>
+        </a>
+        {% endif %}
+      </nav>
 
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <div class="sidebar-footer">
+        <div class="theme-switch btn-group w-100" role="group" aria-label="Colour theme">
+          <button type="button" class="btn btn-sm" data-theme-value="light" title="Light" aria-label="Light theme"><i class="bi bi-sun" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm" data-theme-value="auto" title="Match system" aria-label="Match system theme"><i class="bi bi-circle-half" aria-hidden="true"></i></button>
+          <button type="button" class="btn btn-sm" data-theme-value="dark" title="Dark" aria-label="Dark theme"><i class="bi bi-moon-stars" aria-hidden="true"></i></button>
+        </div>
+        <a class="sidebar-meta" href="https://github.com/marcmylemans/privateglue-public" target="_blank" rel="noopener">
+          <i class="bi bi-github" aria-hidden="true"></i> GitHub{% if APP_VERSION %} · v{{ APP_VERSION }}{% endif %}
+        </a>
+      </div>
+    </aside>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('devices.list_devices') }}">Devices</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('notes.list_notes') }}">Notes</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('credentials.list_credentials') }}">Credentials</a>
-          </li>
-          {% if user_role == "admin" %}
-            <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('admin.list_users') }}">
-                <i class="bi bi-people"></i> Users
-              </a>
-            </li>
-          {% endif %}
-        </ul>
+    <div class="app-main">
+      <header class="app-topbar">
+        <button class="btn btn-icon d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar" aria-controls="appSidebar" aria-label="Open menu">
+          <i class="bi bi-list fs-4" aria-hidden="true"></i>
+        </button>
+        <a href="{{ url_for('index') }}" class="d-lg-none topbar-logo" aria-label="{{ APP_NAME }} dashboard">
+          <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="" width="28" height="28">
+        </a>
 
-        <form class="d-flex me-3" method="GET" action="{{ url_for('search') }}">
-          <input class="form-control me-2" type="search" name="q" placeholder="Search..." id="searchInput" value="{{ request.args.get('q', '') }}">
-          <button class="btn btn-outline-primary" type="submit">Search</button>
+        <form class="topbar-search" method="GET" action="{{ url_for('search') }}" role="search">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <label for="globalSearch" class="visually-hidden">Search devices, notes and credentials</label>
+          <input class="form-control" type="search" name="q" id="globalSearch"
+                 placeholder="Search devices, notes, credentials…" autocomplete="off"
+                 value="{{ request.args.get('q', '') if request.endpoint == 'search' else '' }}">
+          <kbd class="search-hint d-none d-md-inline" aria-hidden="true">/</kbd>
         </form>
-        
 
-        {% if current_user.is_authenticated %}
-        <div class="dropdown">
-          <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-            Welcome, {{ current_user.username or current_user.id }}
+        <div class="dropdown ms-auto">
+          <button class="btn user-menu-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Account menu for {{ current_user.username }}">
+            <span class="avatar" aria-hidden="true">{{ current_user.username[:1] | upper }}</span>
+            <span class="d-none d-sm-inline">{{ current_user.username }}</span>
           </button>
-          <ul class="dropdown-menu dropdown-menu-end">
-            {% if current_user.role == "admin" %}
-              <li>
-                <a class="dropdown-item" href="{{ url_for('admin.create_backup') }}">
-                  <i class="bi bi-cloud-arrow-down me-2"></i> Create Backup
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="{{ url_for('admin.about_page') }}">
-                  <i class="bi bi-info-circle me-2"></i> About / System Info
-                </a>
-              </li>
-            {% endif %}
-            <li>
-              <a class="dropdown-item" href="{{ url_for('auth.profile') }}">
-                <i class="bi bi-person-circle me-2"></i> Profile
-              </a>
-            </li>
-            <li>
-              <a class="dropdown-item" href="#" id="toggle-theme">
-                <i class="bi bi-moon-stars me-2"></i> Toggle Light/Dark
-              </a>
+          <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li class="px-3 pt-2 pb-1">
+              <div class="fw-semibold">{{ current_user.username }}</div>
+              <div class="small text-body-secondary text-capitalize">{{ current_user.role }}</div>
             </li>
             <li><hr class="dropdown-divider"></li>
-            <li>
-              <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
-              </a>
-            </li>
+            <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person-circle" aria-hidden="true"></i> Profile &amp; password</a></li>
+            {% if is_admin %}
+            <li><a class="dropdown-item" href="{{ url_for('admin.create_backup') }}"><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i> Create backup</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('admin.about_page') }}"><i class="bi bi-info-circle" aria-hidden="true"></i> System info</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</a></li>
           </ul>
         </div>
-        {% else %}
-        <a class="btn btn-outline-primary" href="{{ url_for('auth.login') }}">Login</a>
-        {% endif %}
+      </header>
+
+      <main id="main" class="app-content" tabindex="-1">
+        {% block breadcrumb %}{% endblock %}
+        {% block content_app %}{{ self.content() }}{% endblock %}
+      </main>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Flash messages as toasts: success/info fade out, warnings and errors stay until dismissed. #}
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="toastStack">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        {% set cat = 'danger' if category == 'error' else (category if category in ['success', 'info', 'warning', 'danger'] else 'info') %}
+        {% set icon = {'success': 'check-circle-fill', 'info': 'info-circle-fill', 'warning': 'exclamation-triangle-fill', 'danger': 'x-octagon-fill'}[cat] %}
+        <div class="toast pg-toast pg-toast-{{ cat }} show" role="{{ 'alert' if cat in ['danger', 'warning'] else 'status' }}" aria-live="{{ 'assertive' if cat in ['danger', 'warning'] else 'polite' }}" aria-atomic="true" data-bs-autohide="{{ 'false' if cat in ['danger', 'warning'] else 'true' }}" data-bs-delay="5000">
+          <div class="d-flex align-items-start gap-2 p-3">
+            <i class="bi bi-{{ icon }} toast-icon" aria-hidden="true"></i>
+            <div class="flex-grow-1">{{ message }}</div>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Dismiss"></button>
+          </div>
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  {# Shared confirmation dialog used by every form with data-confirm. #}
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-body p-4">
+          <div class="d-flex gap-3">
+            <div class="confirm-icon" aria-hidden="true"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+              <h2 class="h5 mb-2" id="confirmModalTitle">Are you sure?</h2>
+              <p class="mb-0 text-body-secondary" id="confirmModalBody"></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmModalOk">Delete</button>
+        </div>
       </div>
     </div>
-  </nav>
+  </div>
 
-  <!-- Page Content -->
-  <main class="container py-4">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message | safe }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
-    {% block content %}{% endblock %}
-  </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const userPref = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const html = document.documentElement;
-
-    html.setAttribute('data-bs-theme', userPref || (prefersDark ? 'dark' : 'light'));
-
-    document.addEventListener("DOMContentLoaded", function () {
-      const toggle = document.getElementById("toggle-theme");
-      if (toggle) {
-        toggle.addEventListener("click", function (e) {
-          e.preventDefault();
-          const current = html.getAttribute('data-bs-theme');
-          const next = current === 'dark' ? 'light' : 'dark';
-          html.setAttribute('data-bs-theme', next);
-          localStorage.setItem('theme', next);
-        });
-      }
-    });
-  </script>
-  <script>
-    function showSearchAlert() {
-      const term = document.getElementById("searchInput").value;
-      if (term.trim() !== "") {
-        alert("Search is coming soon! You searched for: " + term);
-      }
-    }
-  </script>
-<footer class="text-muted text-center small mt-5 mb-3">
-  <hr>
-  {% if DEMO_MODE %}
-    <p>
-      <a href="https://www.digitalocean.com/?refcode=e03b740d65fb&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge">
-        <img src="https://web-platforms.sfo2.cdn.digitaloceanspaces.com/WWW/Badge%201.svg" alt="DigitalOcean Referral Badge" />
-      </a> •
-      <a href="https://github.com/marcmylemans/privateglue-public" target="_blank">GitHub</a> •
-      <strong>PrivateGlue Demo Instance — resets hourly</strong>
-    </p>
-  {% else %}
-    <p>
-      <a href="https://github.com/marcmylemans/privateglue-public" target="_blank">GitHub</a> •
-      <strong>PrivateGlue</strong>
-    </p>
-  {% endif %}
-</footer>
-  
+  <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/privateglue.js') }}"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

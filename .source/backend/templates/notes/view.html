@@ -1,46 +1,55 @@
 {% extends "base.html" %}
-{% block title %}{{ filename[:-3] }}{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}{{ filename | note_title }} · Notes · {{ APP_NAME }}{% endblock %}
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/highlight/github.min.css') }}" data-hl-theme="light">
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/highlight/github-dark.min.css') }}" data-hl-theme="dark">
+{% endblock %}
+
+{% block breadcrumb %}{{ ui.breadcrumbs([('Notes', url_for('notes.list_notes')), (filename | note_title, None)]) }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">{{ filename[:-3] }}</h2>
-    <div>
-      {# Optional: Check if current_user can edit in the future #}
-      <a href="{{ url_for('notes.edit_note', filename=filename) }}" class="btn btn-sm btn-outline-primary me-2">Edit</a>
-      <a href="{{ url_for('notes.list_notes') }}" class="btn btn-sm btn-outline-secondary">Back to Notes</a>
-    </div>
-  </div>
-
-  <!-- Tags -->
-  {% if tags %}
-  <div class="mb-2">
-    {% for tag in tags %}
-      <a href="{{ url_for('notes.list_notes', tag=tag) }}" class="badge rounded-pill text-bg-light border me-1">
-        #{{ tag }}
-      </a>
-    {% endfor %}
-  </div>
+{% call ui.page_header(filename | note_title, 'Updated ' ~ (mtime | timeago) ~ ' · ' ~ word_count ~ ' words', icon='journal-text') %}
+  {% if can_edit %}
+    <a href="{{ url_for('notes.edit_note', filename=filename) }}" class="btn btn-primary"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
   {% endif %}
+{% endcall %}
 
-  <!-- Linked Devices -->
-  {% if devices %}
-  <div class="mb-4">
-    <div class="small text-muted mb-1">Linked Devices:</div>
-    {% for device in devices %}
-      <a href="{{ url_for('devices.view_device', id=device.id) }}" class="badge text-bg-dark me-1">
-        {{ device.hostname }}
-      </a>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- Markdown Content -->
-  <div class="border rounded p-4 bg-body-tertiary markdown-body" style="min-height: 300px;">
-    {{ content | safe }}
+<div class="row g-3">
+  <div class="col-lg-9 order-2 order-lg-1">
+    <article class="panel">
+      <div class="panel-body markdown-body p-4">
+        {% if content %}{{ content | safe }}{% else %}<p class="text-body-tertiary">This note is empty.{% if can_edit %} <a href="{{ url_for('notes.edit_note', filename=filename) }}">Start writing</a>.{% endif %}</p>{% endif %}
+      </div>
+    </article>
   </div>
 
+  <aside class="col-lg-3 order-1 order-lg-2" aria-label="Note details">
+    <section class="panel">
+      <div class="panel-body">
+        <h2 class="meta-label">Tags</h2>
+        {% if tags %}
+          <div class="chip-list mb-3">{% for tag in tags %}{{ ui.tag_chip(tag) }}{% endfor %}</div>
+        {% else %}
+          <p class="small text-body-secondary mb-3">No tags.</p>
+        {% endif %}
+        <h2 class="meta-label">Linked devices</h2>
+        {% if devices %}
+          <div class="chip-list">{% for device in devices %}{{ ui.device_chip(device) }}{% endfor %}</div>
+        {% else %}
+          <p class="small text-body-secondary mb-0">Not linked to a device.</p>
+        {% endif %}
+      </div>
+      {% if is_admin %}
+      <div class="panel-footer">
+        {{ ui.delete_button(url_for('notes.delete_note', filename=filename), "'" ~ (filename | note_title) ~ "' will be permanently deleted.", 'Delete note', 'btn btn-sm btn-outline-danger w-100', title='Delete note') }}
+      </div>
+      {% endif %}
+    </section>
+  </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/highlight/highlight.min.js') }}"></script>
 {% endblock %}

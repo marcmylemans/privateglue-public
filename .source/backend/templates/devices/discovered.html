@@ -1,50 +1,71 @@
 {% extends 'base.html' %}
-{% block title %}Discovered Devices{% endblock %}
+{% import '_macros.html' as ui %}
+{% block title %}Discovered devices · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Devices', url_for('devices.list_devices')), ('Discovered', None)]) }}{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-  <h2>Discovered Devices</h2>
-  {% if combined_data and combined_data|length > 0 %}
-    <form method="post" action="{{ url_for('devices.import_discovered_devices') }}">
-      <div class="mb-2">
-        <input type="checkbox" id="selectAll" onclick="toggleAll(this)">
-        <label for="selectAll" class="ms-1">Select All</label>
-      </div>
-      <table class="table table-bordered table-sm mt-3">
+{{ ui.page_header('Discovered devices', 'Found on your network by the PrivateGlue probe. Pick the ones to add.', icon='radar', count=combined_data|length if combined_data else 0) }}
+
+{% if combined_data and combined_data|length > 0 %}
+<form method="post" action="{{ url_for('devices.import_discovered_devices') }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="alert alert-warning small" role="note"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+    <div>Rows marked <span class="dup">Already known</span> share a hostname, IP or MAC with an existing device. They're unchecked by default to avoid duplicates.</div>
+  </div>
+  <div class="table-panel mb-3">
+    <div class="table-responsive">
+      <table class="table pg-table table-hover">
         <thead>
           <tr>
-            <th></th>
-            <th>Hostname</th>
-            <th>IP Address</th>
-            <th>MAC Address</th>
-            <th>Type</th>
-            <th>OS</th>
+            <th scope="col" style="width:1%"><input type="checkbox" class="form-check-input" id="selectAll" aria-label="Select all new devices"></th>
+            <th scope="col">Hostname</th><th scope="col">IP address</th><th scope="col" class="d-none d-md-table-cell">MAC address</th>
+            <th scope="col" class="d-none d-md-table-cell">Type</th><th scope="col" class="d-none d-lg-table-cell">OS</th>
           </tr>
         </thead>
         <tbody>
           {% for d, duplicate_fields in combined_data %}
-          <tr class="{% if duplicate_fields %}table-warning{% endif %}">
-            <td><input type="checkbox" name="selected" value="{{ loop.index0 }}" class="device-checkbox"></td>
-            <td class="{% if 'hostname' in duplicate_fields %}text-danger{% endif %}">{{ d.hostname or d.ip_address }}</td>
-            <td class="{% if 'ip_address' in duplicate_fields %}text-danger{% endif %}">{{ d.ip_address }}</td>
-            <td class="{% if 'mac_address' in duplicate_fields %}text-danger{% endif %}">{{ d.mac_address }}</td>
-            <td>{{ d.device_type }}</td>
-            <td>{{ d.operating_system }}</td>
+          <tr>
+            <td><input type="checkbox" name="selected" value="{{ loop.index0 }}" class="form-check-input device-checkbox" id="disc{{ loop.index0 }}" {% if not duplicate_fields %}data-new{% endif %}></td>
+            <td><label for="disc{{ loop.index0 }}" class="fw-semibold {{ 'dup' if 'hostname' in duplicate_fields }}">{{ d.hostname or d.ip_address }}</label>
+              {% if duplicate_fields %}<div class="small dup">Already known ({{ duplicate_fields | map('replace', '_address', '') | map('replace', '_', ' ') | join(', ') }})</div>{% endif %}</td>
+            <td class="mono {{ 'dup' if 'ip_address' in duplicate_fields }}">{{ d.ip_address }}</td>
+            <td class="mono small d-none d-md-table-cell {{ 'dup' if 'mac_address' in duplicate_fields }}">{{ d.mac_address or '–' }}</td>
+            <td class="d-none d-md-table-cell">{{ d.device_type or '–' }}</td>
+            <td class="d-none d-lg-table-cell">{{ d.operating_system or '–' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-      <button type="submit" class="btn btn-success">Import Selected</button>
-    </form>
-    <script>
-      function toggleAll(source) {
-        const checkboxes = document.querySelectorAll('.device-checkbox');
-        for (const cb of checkboxes) {
-          cb.checked = source.checked;
-        }
-      }
-    </script>
-  {% else %}
-    <div class="alert alert-info mt-4">No discovered devices available. Run the probe and refresh this page.</div>
-  {% endif %}
-</div>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <button type="submit" class="btn btn-primary" id="importBtn"><i class="bi bi-download" aria-hidden="true"></i> Import selected</button>
+    <span class="small text-body-secondary" id="selCount" aria-live="polite"></span>
+  </div>
+</form>
+{% else %}
+  <div class="panel">
+    {{ ui.empty_state('radar', 'Nothing discovered yet', 'Run the PrivateGlue probe on your network. Devices it finds will show up here for review.') }}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var all = document.getElementById('selectAll');
+    if (!all) return;
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.device-checkbox'));
+    var btn = document.getElementById('importBtn'), count = document.getElementById('selCount');
+    function refresh() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      count.textContent = n + ' of ' + boxes.length + ' selected';
+      btn.disabled = n === 0;
+      all.checked = n > 0 && n === boxes.length; all.indeterminate = n > 0 && n < boxes.length;
+    }
+    all.addEventListener('change', function () { boxes.forEach(function (b) { b.checked = all.checked && (b.hasAttribute('data-new') || all.checked); }); refresh(); });
+    boxes.forEach(function (b) { if (b.hasAttribute('data-new')) b.checked = true; b.addEventListener('change', refresh); });
+    refresh();
+  })();
+</script>
 {% endblock %}

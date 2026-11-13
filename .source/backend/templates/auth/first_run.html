@@ -1,55 +1,39 @@
 {% extends "base.html" %}
-{% block title %}Initial Setup - PrivateGlue{% endblock %}
+{% set bare_layout = true %}
+{% block title %}Set up {{ APP_NAME }}{% endblock %}
 
 {% block content %}
-<div class="container-md mt-5" style="max-width: 600px;">
-  <div class="card shadow-sm border-0">
-    <div class="card-body p-4">
-      <h2 class="mb-4 text-center">Welcome to PrivateGlue</h2>
-      <p class="text-muted text-center">
-        It looks like this is your first time setting up the app.
-      </p>
+<div class="bare-card wide">
+  <h1>Welcome to {{ APP_NAME }}</h1>
+  <p class="text-body-secondary mb-4">Let's get you set up. Start fresh with a new admin account, or restore an existing backup.</p>
 
-      {% if zip_found %}
-        <div class="alert alert-info">
-          A backup archive was automatically detected. Would you like to restore it?
-        </div>
+  <a href="{{ url_for('auth.register') }}" class="btn btn-primary w-100 py-2 mb-4">
+    <i class="bi bi-person-plus" aria-hidden="true"></i> Create the admin account
+  </a>
 
-        <form method="POST" action="{{ url_for('auth.first_run') }}">
-          <div class="d-grid gap-2">
-            <button type="submit" name="action" value="restore" class="btn btn-primary">
-              Restore Detected Backup
-            </button>
-            <button type="submit" name="action" value="skip" class="btn btn-outline-secondary">
-              Skip and Register New User
-            </button>
-          </div>
-        </form>
-
-        <hr class="my-4">
-      {% endif %}
-
-      <h5 class="text-center mb-3">Restore from a backup file:</h5>
-      <form method="POST" action="{{ url_for('auth.first_run') }}" enctype="multipart/form-data">
-        <div class="mb-3">
-          <input type="file" name="backup_file" class="form-control" accept=".zip" required>
-        </div>
-        <div class="d-grid">
-          <button type="submit" name="action" value="upload_restore" class="btn btn-outline-primary">
-            Upload and Restore
-          </button>
-        </div>
-      </form>
-
-      {% if not zip_found %}
-        <hr class="my-4">
-        <div class="d-grid">
-          <a href="{{ url_for('auth.register') }}" class="btn btn-secondary">
-            Skip and Register New User
-          </a>
-        </div>
-      {% endif %}
-    </div>
+  <div class="d-flex align-items-center gap-3 mb-4 text-body-tertiary small" aria-hidden="true">
+    <hr class="flex-grow-1 m-0"> or restore a backup <hr class="flex-grow-1 m-0">
   </div>
+
+  {% if zip_found %}
+  <form method="POST" action="{{ url_for('auth.first_run') }}" class="mb-3"
+        data-confirm="The detected backup will be restored into this instance." data-confirm-title="Restore backup?" data-confirm-ok="Restore">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="alert alert-info mb-2"><i class="bi bi-archive" aria-hidden="true"></i>
+      <div>A backup archive was found in the backups folder{% if backups %}: <span class="mono">{{ backups[0] }}</span>{% endif %}.</div>
+    </div>
+    <button type="submit" name="action" value="restore" class="btn btn-outline-primary w-100"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Restore detected backup</button>
+  </form>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('auth.first_run') }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="backup_file" class="form-label">Upload a backup (.zip)</label>
+    <div class="input-group">
+      <input type="file" id="backup_file" name="backup_file" class="form-control" accept=".zip" required aria-describedby="backupHelp">
+      <button type="submit" name="action" value="upload_restore" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Restore</button>
+    </div>
+    <div id="backupHelp" class="form-text">Created from <em>Create backup</em> in the account menu of an existing install. Max 5 MB.</div>
+  </form>
 </div>
 {% endblock %}

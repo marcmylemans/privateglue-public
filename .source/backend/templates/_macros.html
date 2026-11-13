@@ -1,0 +1,119 @@
+{# Shared UI building blocks. Import with: {% import "_macros.html" as ui %} #}
+
+{% macro page_header(title, subtitle=None, icon=None, count=None) -%}
+<div class="page-header">
+  <div class="page-header-text">
+    <h1 class="page-title">
+      {%- if icon %}<i class="bi bi-{{ icon }} page-title-icon" aria-hidden="true"></i>{% endif -%}
+      {{ title }}
+      {%- if count is not none %} <span class="count-pill" aria-label="{{ count }} items">{{ count }}</span>{% endif -%}
+    </h1>
+    {% if subtitle %}<p class="page-subtitle">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if caller %}<div class="page-actions">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro breadcrumbs(items) -%}
+{# items: list of (label, url_or_none) #}
+<nav aria-label="Breadcrumb" class="pg-breadcrumb">
+  <ol class="breadcrumb mb-0">
+    {% for label, url in items %}
+      {% if url and not loop.last %}
+        <li class="breadcrumb-item"><a href="{{ url }}">{{ label }}</a></li>
+      {% else %}
+        <li class="breadcrumb-item active" aria-current="page">{{ label }}</li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{%- endmacro %}
+
+{% macro empty_state(icon, title, text=None, action_url=None, action_label=None, action_icon='plus-lg') -%}
+<div class="empty-state">
+  <div class="empty-state-icon" aria-hidden="true"><i class="bi bi-{{ icon }}"></i></div>
+  <h2 class="h5 mb-1">{{ title }}</h2>
+  {% if text %}<p class="text-body-secondary mb-3">{{ text }}</p>{% endif %}
+  {% if action_url %}
+    <a href="{{ action_url }}" class="btn btn-primary"><i class="bi bi-{{ action_icon }}" aria-hidden="true"></i> {{ action_label }}</a>
+  {% endif %}
+  {% if caller %}{{ caller() }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro delete_button(action, what, label='Delete', classes='btn btn-outline-danger', icon=True, title='Delete') -%}
+<form method="POST" action="{{ action }}" class="d-inline"
+      data-confirm="{{ what }}" data-confirm-title="{{ title }}?" data-confirm-ok="{{ label }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="{{ classes }}">{% if icon %}<i class="bi bi-trash3" aria-hidden="true"></i> {% endif %}{{ label }}</button>
+</form>
+{%- endmacro %}
+
+{% macro copy_button(value, label='Copy') -%}
+<button type="button" class="btn btn-copy" data-copy-text="{{ value }}" aria-label="{{ label }}" title="{{ label }}">
+  <i class="bi bi-copy" aria-hidden="true"></i>
+</button>
+{%- endmacro %}
+
+{% macro fact(label, value, mono=False, copy=False, secret=False) -%}
+<div class="fact">
+  <dt>{{ label }}</dt>
+  <dd>
+    {% if value %}
+      {% if secret %}
+        <span class="secret-value" data-secret="{{ value }}"><span class="mono">••••••••••••</span></span>
+        <button type="button" class="btn btn-copy" data-reveal aria-label="Show {{ label | lower }}" title="Show"><i class="bi bi-eye" aria-hidden="true"></i></button>
+      {% else %}
+        <span class="{{ 'mono' if mono }}">{{ value }}</span>
+      {% endif %}
+      {% if copy %}{{ copy_button(value, 'Copy ' ~ label | lower) }}{% endif %}
+    {% else %}
+      <span class="text-body-tertiary">Not set</span>
+    {% endif %}
+  </dd>
+</div>
+{%- endmacro %}
+
+{% macro device_chip(device, url=None) -%}
+<a href="{{ url or url_for('devices.view_device', id=device.id) }}" class="chip chip-device">
+  <i class="bi bi-{{ device.device_type | device_icon }}" aria-hidden="true"></i>{{ device.hostname }}
+</a>
+{%- endmacro %}
+
+{% macro tag_chip(tag, url=None) -%}
+<a href="{{ url or url_for('notes.list_notes', tag=tag) }}" class="chip chip-tag">#{{ tag }}</a>
+{%- endmacro %}
+
+{% macro role_badge(role) -%}
+{% set styles = {'admin': ('shield-check', 'role-admin'), 'editor': ('pencil-square', 'role-editor'), 'readonly': ('eye', 'role-readonly')} %}
+{% set s = styles.get(role, ('person', 'role-readonly')) %}
+<span class="role-badge {{ s[1] }}"><i class="bi bi-{{ s[0] }}" aria-hidden="true"></i>{{ 'Read-only' if role == 'readonly' else role | capitalize }}</span>
+{%- endmacro %}
+
+{% macro device_checklist(all_devices, selected_ids, name='devices', id='deviceChecklist') -%}
+<div class="checklist" id="{{ id }}">
+  <div class="checklist-toolbar">
+    <i class="bi bi-funnel" aria-hidden="true"></i>
+    <label for="{{ id }}-filter" class="visually-hidden">Filter devices</label>
+    <input type="search" id="{{ id }}-filter" class="form-control form-control-sm" placeholder="Filter devices…" data-checklist-filter="#{{ id }}">
+    <span class="checklist-count small text-body-secondary" aria-live="polite"></span>
+  </div>
+  <div class="checklist-items">
+    {% for device in all_devices %}
+      <label class="checklist-item" data-filter-text="{{ device.hostname }} {{ device.ip_address or '' }} {{ device.device_type or '' }}">
+        <input class="form-check-input" type="checkbox" name="{{ name }}" value="{{ device.id }}" {% if device.id in selected_ids %}checked{% endif %}>
+        <i class="bi bi-{{ device.device_type | device_icon }} text-body-secondary" aria-hidden="true"></i>
+        <span class="flex-grow-1">{{ device.hostname }}</span>
+        {% if device.ip_address %}<span class="mono small text-body-secondary">{{ device.ip_address }}</span>{% endif %}
+      </label>
+    {% else %}
+      <p class="text-body-secondary small m-2">No devices yet. <a href="{{ url_for('devices.add_device') }}">Add one first.</a></p>
+    {% endfor %}
+    <p class="checklist-empty text-body-secondary small m-2" hidden>No devices match.</p>
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro password_feedback(id, min_length=8, hint=None) -%}
+<div id="{{ id }}" class="form-text pw-feedback" aria-live="polite">{{ hint or 'At least ' ~ min_length ~ ' characters.' }}</div>
+{%- endmacro %}
