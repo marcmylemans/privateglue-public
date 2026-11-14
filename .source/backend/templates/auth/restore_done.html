@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% set bare_layout = true %}
+{% block title %}Backup restored · {{ APP_NAME }}{% endblock %}
+{% block head %}{% if restarting %}<meta http-equiv="refresh" content="5;url={{ url_for('auth.login') }}">{% endif %}{% endblock %}
+
+{% block content %}
+<div class="bare-card wide">
+  <h1>Backup restored</h1>
+  {% if restarting %}
+  <div class="alert alert-success" role="status"><i class="bi bi-check-circle" aria-hidden="true"></i>
+    <div>Your data is back. {{ APP_NAME }} is restarting to load it, which takes a few seconds. The sign-in page opens by itself.</div>
+  </div>
+  <p class="text-body-secondary">Sign in with an account from the backup. Passwords are the ones from the old install.</p>
+  <a href="{{ url_for('auth.login') }}" class="btn btn-primary w-100 py-2">Go to sign-in</a>
+  {% else %}
+  <div class="alert alert-warning" role="alert"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+    <div><strong>Restart {{ APP_NAME }} now.</strong> Your data is in place, but the running app still uses the old database and encryption key. It could not restart itself here.</div>
+  </div>
+  <p class="text-body-secondary mb-1">Docker: <code class="code-inline">docker compose restart</code></p>
+  <p class="text-body-secondary">Proxmox install: <code class="code-inline">systemctl restart privateglue</code></p>
+  <p class="text-body-secondary">Then sign in with an account from the backup.</p>
+  {% endif %}
+</div>
+{% endblock %}

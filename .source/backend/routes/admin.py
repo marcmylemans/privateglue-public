@@ -61,26 +61,6 @@ def create_backup():
     return redirect(url_for("admin.about_page") + "#backups")
 
 
-@admin_bp.route("/admin/restore", methods=["POST"])
-@login_required
-@admin_required
-def restore_backup():
-    backup_folder = paths.BACKUP_DIR
-    backup_files = [f for f in os.listdir(backup_folder) if f.endswith(".zip")]
-
-    if not backup_files:
-        flash("No backup file found to restore.", "danger")
-        return redirect(url_for("auth.first_run"))
-
-    backup_path = os.path.join(backup_folder, backup_files[0])  # Use the first .zip file found
-    ok, message = extract_backup_zip(backup_path)
-    if not ok:
-        flash(f"Restore failed: {message}", "danger")
-        return redirect(url_for("index"))
-
-    flash("Backup successfully restored. Restarting app to apply changes...", "info")
-    os.execv(sys.executable, ['python'] + sys.argv)
-
 @admin_bp.route("/admin/download/<filename>")
 @login_required
 @admin_required

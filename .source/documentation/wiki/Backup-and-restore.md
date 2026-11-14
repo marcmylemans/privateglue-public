@@ -26,7 +26,9 @@ A backup is restored into a **fresh install**, from the setup screen. It replace
 1. Install PrivateGlue in a new folder. See [Installation](Installation). Do not create an account yet.
 2. Open PrivateGlue. The setup screen offers **restore a backup**.
 3. Upload your backup zip and click **Restore**. Alternatively, copy the zip into the new install's `./backups` folder before opening the page: the setup screen then offers **Restore detected backup**.
-4. PrivateGlue restarts. Sign in with an account from the backup.
+4. PrivateGlue shows **Backup restored** and restarts by itself to load the restored database and encryption key. That takes a few seconds, then the sign-in page opens. Sign in with an account from the backup.
+
+The container or service keeps running during this; only the app inside it reloads. If the page instead asks you to restart, do that by hand: `docker compose restart`, or `systemctl restart privateglue` on a Proxmox install.
 
 ## Move to another server
 

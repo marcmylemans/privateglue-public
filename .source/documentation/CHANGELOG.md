@@ -6,6 +6,17 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+### Fixed
+- **Restoring a backup now takes effect by itself.** The app reloads after a restore, so the
+  restored accounts and stored passwords work straight away. Before, the old database and
+  encryption key stayed in use until someone restarted the container, and the notice that
+  asked for it was easy to miss. A "Backup restored" page shows while it reloads.
+
+### Removed
+- The unused `/admin/restore` address. It could replace the database of a running install
+  with a backup file from the backups folder. Restoring is only offered on the setup screen
+  of a new install.
+
 ### Added
 - **Install on Proxmox VE without Docker.** One command in the Proxmox shell creates an LXC
   container and installs PrivateGlue in it as a systemd service, built on the community-scripts

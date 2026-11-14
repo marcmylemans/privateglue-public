@@ -5,7 +5,7 @@ from backend.models.users import User
 from backend.forms.auth import LoginForm, RegistrationForm, ChangePasswordForm
 from backend.extensions import db, limiter
 from backend.utils.backup import extract_backup_zip
-from backend.utils.reboot import shutdown_server
+from backend.utils.reboot import restart_app
 from backend.utils.security import is_safe_redirect_target
 from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
@@ -119,6 +119,12 @@ def check_username():
     exists = User.query.filter_by(username=username).first() is not None
     return {"exists": exists}
 
+def _restore_done():
+    """After a restore the running workers still hold the old database and encryption key.
+    Restart them, and show a page that says so and moves on to the sign-in by itself."""
+    return render_template("auth/restore_done.html", restarting=restart_app())
+
+
 @auth_bp.route("/first-run", methods=["GET", "POST"])
 def first_run():
     user_exists = User.query.first() is not None
@@ -137,8 +143,7 @@ def first_run():
                 zip_path = os.path.join(backup_folder, zip_files[0])
                 ok, message = extract_backup_zip(zip_path)
                 if ok:
-                    flash("Backup successfully restored. Please restart the app.", "success")
-                    return redirect(url_for("auth.login"))
+                    return _restore_done()
                 flash(f"Restore failed: {message}", "danger")
                 return redirect(url_for("auth.first_run"))
             except Exception as e:
@@ -159,16 +164,8 @@ def first_run():
                     if not ok:
                         flash(f"Restore failed: {message}", "danger")
                         return redirect(url_for("auth.first_run"))
-                    shutdown_func = request.environ.get("werkzeug.server.shutdown")
+                    return _restore_done()
 
-                    if shutdown_func:
-                        threading.Thread(target=lambda: (time.sleep(1), shutdown_server(shutdown_func))).start()
-                        flash("Backup restored. Shutting down to apply restore...", "warning")
-                        return redirect(url_for("auth.login"))
-                    else:
-                        flash("Backup restored. Please restart the app manually.", "warning")
-                        return redirect(url_for("auth.login"))
-                    
                 except Exception as e:
                     flash(f"Restore failed: {str(e)}", "danger")
             else:
