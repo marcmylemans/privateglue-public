@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% block title %}Integrations · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+{{ ui.page_header('Integrations', 'Connect ' ~ APP_NAME ~ ' to the other systems you run. Everything is off until you turn it on.', count=items|length) }}
+
+{% if not items %}
+  {{ ui.empty_state('plug', 'No integrations installed', 'This version of ' ~ APP_NAME ~ ' ships without integration modules.') }}
+{% else %}
+<div class="table-panel">
+  <div class="table-responsive">
+    <table class="table pg-table">
+      <thead>
+        <tr>
+          <th scope="col">Integration</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="d-none d-md-table-cell">Last sync</th>
+          <th scope="col" class="actions"><span class="visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for integration, row in items %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-start gap-2">
+              <i class="bi bi-{{ integration.icon }} text-body-secondary mt-1" aria-hidden="true"></i>
+              <div>
+                <a class="fw-semibold link-body-emphasis text-decoration-none" href="{{ url_for('integrations.configure', key=integration.key) }}">{{ integration.name }}</a>
+                <div class="small text-body-secondary">{{ integration.description }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="text-nowrap">
+            {% if row and row.enabled %}
+              <span class="small"><span class="status-dot ok me-1" aria-hidden="true"></span>On</span>
+            {% else %}
+              <span class="small text-body-secondary"><span class="status-dot me-1" aria-hidden="true"></span>Off</span>
+            {% endif %}
+          </td>
+          <td class="d-none d-md-table-cell small">
+            {% if row and row.running_since %}
+              <span class="status-dot warn me-1" aria-hidden="true"></span>Running
+            {% elif row and row.last_run_at %}
+              <span class="status-dot {{ {'ok': 'ok', 'warning': 'warn', 'error': 'bad'}.get(row.last_status, '') }} me-1" aria-hidden="true"></span>
+              {{ row.last_run_at.strftime('%Y-%m-%d %H:%M') }} UTC
+              <div class="text-body-secondary text-truncate" style="max-width: 28rem">{{ row.last_message }}</div>
+            {% else %}
+              <span class="text-body-tertiary">Never</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('integrations.configure', key=integration.key) }}">
+              <i class="bi bi-gear" aria-hidden="true"></i> Settings
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

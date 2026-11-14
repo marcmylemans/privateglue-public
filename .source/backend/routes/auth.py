@@ -6,19 +6,30 @@ from backend.forms.auth import LoginForm, RegistrationForm, ChangePasswordForm
 from backend.extensions import db, limiter
 from backend.utils.backup import extract_backup_zip
 from backend.utils.reboot import shutdown_server
+from backend.utils.security import is_safe_redirect_target
+from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 import os, sys, threading, time
+from backend.utils import paths
 
 auth_bp = Blueprint("auth", __name__)
 
+
+def _login_username_key():
+    """Rate-limit key per username, so guessing one account's password is slowed down
+    even when the attempts come from many addresses."""
+    return "login-user:" + (request.form.get("username") or "").strip().lower()[:64]
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute", methods=["POST"])
+@limiter.limit("20 per hour", methods=["POST"], key_func=_login_username_key)
 def login():
     # Optional: redirect to register if no users exist
     if User.query.count() == 0:
         # Nobody can log in yet, so drop the "Please log in" flash from the login redirect.
         session.pop("_flashes", None)
-        backups = [f for f in os.listdir('/app/backups') if f.endswith('.zip')]
+        backups = [f for f in os.listdir(paths.BACKUP_DIR) if f.endswith('.zip')]
         show_restore_option = len(backups) > 0
         return render_template('auth/first_run.html', zip_found=show_restore_option, backups=backups)
 
@@ -38,7 +49,7 @@ def login():
                 return redirect(url_for('auth.force_change_password'))
             else:
                 next_url = request.args.get("next", "")
-                if next_url.startswith("/") and not next_url.startswith("//"):
+                if is_safe_redirect_target(next_url):
                     return redirect(next_url)
                 return redirect(url_for('index'))
         else:
@@ -47,7 +58,17 @@ def login():
     return render_template("auth/login.html", form=form)
 
 @auth_bp.route("/register", methods=["GET", "POST"])
+@limiter.limit("10 per hour", methods=["POST"])
 def register():
+    # Self-registration exists only to create the very first account (the admin) on a new
+    # install. After that, accounts are created by an admin under Users. Any account,
+    # including read-only, can read every stored password, so sign-up must never be open.
+    if User.query.count() > 0:
+        if current_user.is_authenticated:
+            return redirect(url_for("index"))
+        flash("Sign-up is closed. Ask an administrator to create an account for you.", "warning")
+        return redirect(url_for("auth.login"))
+
     form = RegistrationForm()
 
     if form.validate_on_submit():
@@ -79,17 +100,21 @@ def register():
 
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for("index"))
+    session.clear()
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/check_username")
-@limiter.limit("10 per minute")
+@limiter.limit("30 per minute")
 def check_username():
-    from backend.models.users import User  # or your adjusted import
+    # Tells whether a username exists, so only for the first-run sign-up and for admins
+    # creating users. Otherwise anyone could use it to collect valid usernames.
+    if User.query.count() > 0 and not (current_user.is_authenticated and current_user.role == "admin"):
+        return {"error": "forbidden"}, 403
     username = request.args.get("username", "")
     exists = User.query.filter_by(username=username).first() is not None
     return {"exists": exists}
@@ -97,7 +122,7 @@ def check_username():
 @auth_bp.route("/first-run", methods=["GET", "POST"])
 def first_run():
     user_exists = User.query.first() is not None
-    backup_folder = "/app/backups"
+    backup_folder = paths.BACKUP_DIR
     zip_files = [f for f in os.listdir(backup_folder) if f.endswith(".zip")]
     zip_found = bool(zip_files)
 
@@ -124,7 +149,9 @@ def first_run():
             uploaded_file = request.files.get("backup_file")
             if uploaded_file and uploaded_file.filename.endswith(".zip"):
                 os.makedirs(backup_folder, exist_ok=True)
-                save_path = os.path.join(backup_folder, uploaded_file.filename)
+                # Never trust the uploaded name: "../../x.zip" would write outside the folder.
+                safe_name = secure_filename(uploaded_file.filename) or "uploaded-backup.zip"
+                save_path = os.path.join(backup_folder, safe_name)
                 uploaded_file.save(save_path)
 
                 try:
@@ -179,20 +206,29 @@ def change_password():
         flash("Password must be at least 8 characters long.", "danger")
         return redirect(url_for("auth.profile"))
 
-    current_user.set_password(new_password)
+    user = current_user._get_current_object()
+    user.set_password(new_password)  # also signs out every other session of this user
     db.session.commit()
-    flash("Password updated successfully.", "success")
+    login_user(user, remember=session.permanent)
+    flash("Password updated. Other devices signed in with this account have been signed out.", "success")
     return redirect(url_for("auth.profile"))
 
 
 @auth_bp.route("/delete-account", methods=["POST"])
 @login_required
 def delete_account():
-    user_id = current_user.id
-    db.session.delete(current_user)
+    # With no accounts left, the first-run wizard would open again and the next visitor
+    # could make themselves admin. So the last admin cannot remove themselves.
+    if current_user.role == "admin" and User.query.filter_by(role="admin").count() <= 1:
+        flash("You are the only administrator. Make someone else an admin before deleting your account.", "danger")
+        return redirect(url_for("auth.profile"))
+    user = current_user._get_current_object()
+    logout_user()
+    session.clear()
+    db.session.delete(user)
     db.session.commit()
     flash("Your account has been deleted.", "info")
-    return redirect(url_for("auth.logout"))
+    return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/force-change-password", methods=["GET", "POST"])

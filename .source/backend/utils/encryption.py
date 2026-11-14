@@ -3,9 +3,10 @@ import tempfile
 import time
 
 from cryptography.fernet import Fernet
+from backend.utils import paths
 
 # Check for environment variable, fallback to default
-SECRET_KEY_PATH = os.environ.get("SECRET_KEY_PATH", "/app/secret/secret.key")
+SECRET_KEY_PATH = paths.secret_key_path()
 
 
 def load_or_create_secret_file(path, generate, mode=0o600):

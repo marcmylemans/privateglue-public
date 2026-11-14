@@ -5,7 +5,18 @@
 {% block content %}
 {% call ui.page_header('Devices', 'Hardware, VMs and network gear in your environment.', count=devices|length) %}
   {% if can_edit %}
-    <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Import CSV</a>
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-box-arrow-in-down" aria-hidden="true"></i> Import
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('devices.import_devices') }}"><i class="bi bi-upload" aria-hidden="true"></i> From a CSV file</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('devices.show_discovered_devices') }}"><i class="bi bi-radar" aria-hidden="true"></i> Scan your network (probe)</a></li>
+        {% if is_admin %}
+        <li><a class="dropdown-item" href="{{ url_for('integrations.list_integrations') }}"><i class="bi bi-plug" aria-hidden="true"></i> Sync from another system</a></li>
+        {% endif %}
+      </ul>
+    </div>
     <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add device</a>
   {% endif %}
 {% endcall %}
@@ -49,16 +60,26 @@
 </form>
 
 {% if devices %}
+{% if is_admin %}
+<form method="POST" action="{{ url_for('devices.delete_selected_devices') }}" id="bulkForm" class="bulk-bar" hidden
+      data-confirm="The selected devices will be removed. Linked credentials stay, but lose the device link." data-confirm-title="Delete selected devices?" data-confirm-ok="Delete">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <span id="bulkCount" aria-live="polite"></span>
+  <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash3" aria-hidden="true"></i> Delete selected</button>
+  <button type="button" class="btn btn-link btn-sm" id="bulkClear">Clear selection</button>
+</form>
+{% endif %}
 <div class="table-panel">
   <div class="table-responsive">
-    <table class="table pg-table table-hover" id="deviceTable">
+    <table class="table pg-table table-hover" id="deviceTable" data-sortable>
       <thead>
         <tr>
-          <th scope="col">Hostname</th>
-          <th scope="col">IP address</th>
-          <th scope="col" class="d-none d-md-table-cell">Type</th>
-          <th scope="col" class="d-none d-lg-table-cell">Operating system</th>
-          <th scope="col" class="d-none d-md-table-cell">Location</th>
+          {% if is_admin %}<th scope="col" class="select-col"><input type="checkbox" class="form-check-input" id="bulkAll" aria-label="Select all devices shown"></th>{% endif %}
+          <th scope="col" data-sort>Hostname</th>
+          <th scope="col" data-sort>IP address</th>
+          <th scope="col" class="d-none d-md-table-cell" data-sort>Type</th>
+          <th scope="col" class="d-none d-lg-table-cell" data-sort>Operating system</th>
+          <th scope="col" class="d-none d-md-table-cell" data-sort>Location</th>
           <th scope="col" class="actions"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
@@ -66,7 +87,8 @@
         {% for device in devices %}
           <tr data-href="{{ url_for('devices.view_device', id=device.id) }}"
               data-filter-text="{{ device.hostname }} {{ device.ip_address or '' }} {{ device.mac_address or '' }} {{ device.device_type or '' }} {{ device.operating_system or '' }} {{ device.os_version or '' }} {{ device.location or '' }}">
-            <td>
+            {% if is_admin %}<td class="select-col"><input type="checkbox" class="form-check-input bulk-box" name="ids" value="{{ device.id }}" form="bulkForm" aria-label="Select {{ device.hostname }}"></td>{% endif %}
+            <td data-sort-value="{{ device.hostname }}">
               <div class="d-flex align-items-center gap-2">
                 <span class="item-icon" title="{{ device.device_type or 'Unknown type' }}"><i class="bi bi-{{ device.device_type | device_icon }}" aria-hidden="true"></i></span>
                 <div class="min-w-0">
@@ -75,7 +97,7 @@
                 </div>
               </div>
             </td>
-            <td>{% if device.ip_address %}<span class="mono">{{ device.ip_address }}</span>{% else %}<span class="text-body-tertiary">–</span>{% endif %}</td>
+            <td data-sort-value="{{ device.ip_address or '' }}">{% if device.ip_address %}<span class="mono">{{ device.ip_address }}</span>{% else %}<span class="text-body-tertiary">–</span>{% endif %}</td>
             <td class="d-none d-md-table-cell">{{ device.device_type | type_label or '–' }}</td>
             <td class="d-none d-lg-table-cell">
               {% if device.operating_system %}{{ device.operating_system }}{% if device.os_version %} <span class="text-body-secondary">{{ device.os_version }}</span>{% endif %}{% else %}<span class="text-body-tertiary">–</span>{% endif %}
@@ -106,7 +128,7 @@
             </td>
           </tr>
         {% endfor %}
-        <tr class="filter-empty" hidden><td colspan="6"><i class="bi bi-search d-block fs-4 mb-1" aria-hidden="true"></i>No devices match your filter.</td></tr>
+        <tr class="filter-empty" hidden><td colspan="{{ 7 if is_admin else 6 }}"><i class="bi bi-search d-block fs-4 mb-1" aria-hidden="true"></i>No devices match your filter.</td></tr>
       </tbody>
     </table>
   </div>
@@ -119,12 +141,36 @@
   <div class="panel">
     {% call ui.empty_state('hdd-network', 'No devices yet', 'Add servers, switches, VMs and anything else you want to document.') %}
       {% if can_edit %}
-      <div class="d-flex flex-wrap justify-content-center gap-2">
-        <a href="{{ url_for('devices.add_device') }}" class="btn btn-primary"><i class="bi bi-plus-lg" aria-hidden="true"></i> Add device</a>
-        <a href="{{ url_for('devices.import_devices') }}" class="btn btn-outline-secondary"><i class="bi bi-upload" aria-hidden="true"></i> Import CSV</a>
-      </div>
+      {% include 'devices/_ways_to_add.html' %}
       {% endif %}
     {% endcall %}
   </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if is_admin %}
+<script nonce="{{ csp_nonce }}">
+  // Selecting several devices to delete them in one go.
+  (function () {
+    var form = document.getElementById('bulkForm'); if (!form) return;
+    var all = document.getElementById('bulkAll'), count = document.getElementById('bulkCount');
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.bulk-box'));
+    function shown() { return boxes.filter(function (b) { return !b.closest('tr').hidden; }); }
+    function refresh() {
+      var n = boxes.filter(function (b) { return b.checked; }).length, visible = shown();
+      var picked = visible.filter(function (b) { return b.checked; }).length;
+      form.hidden = n === 0;
+      count.textContent = n + (n === 1 ? ' device selected' : ' devices selected');
+      all.checked = visible.length > 0 && picked === visible.length;
+      all.indeterminate = picked > 0 && picked < visible.length;
+    }
+    all.addEventListener('change', function () { shown().forEach(function (b) { b.checked = all.checked; }); refresh(); });
+    boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+    document.getElementById('bulkClear').addEventListener('click', function () { boxes.forEach(function (b) { b.checked = false; }); refresh(); });
+    var filter = document.getElementById('deviceFilter'); if (filter) filter.addEventListener('input', function () { setTimeout(refresh, 0); });
+    refresh();
+  })();
+</script>
 {% endif %}
 {% endblock %}

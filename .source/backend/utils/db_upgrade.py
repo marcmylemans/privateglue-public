@@ -1,9 +1,10 @@
 import sqlite3
 import os
 from backend.extensions import db
+from backend.utils import paths
 
-def check_and_upgrade_database():
-     db_path = "/app/data/app.db"  # or wherever your db lives
+def check_and_upgrade_database(db_path=None):
+     db_path = db_path or paths.DB_PATH
 
      if db.engine.url.drivername.startswith("sqlite"):
          if not os.path.exists(db_path):
@@ -29,6 +30,13 @@ def check_and_upgrade_database():
              print("User table upgraded successfully.")
          else:
              print("User table already up-to-date.")
+
+         if columns and "session_version" not in columns:
+             print("Adding session_version column to User table...")
+             cursor.execute(
+                 "ALTER TABLE user ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0;"
+             )
+             conn.commit()
 
          # Upgrade Device table with new columns
          cursor.execute("PRAGMA table_info(device);")

@@ -34,12 +34,12 @@
   </form>
 
   <p class="text-center small text-body-secondary mt-4 mb-0">
-    No account yet? <a href="{{ url_for('auth.register') }}">Request access</a>
+    No account yet? Ask an administrator to create one for you.
   </p>
 </div>
 
 {% if DEMO_MODE %}
-<script>
+<script nonce="{{ csp_nonce }}">
   document.addEventListener("DOMContentLoaded", function () {
     var u = document.getElementById("username"), p = document.getElementById("password");
     if (u && p) { u.value = "demo"; p.value = "privateglue"; }

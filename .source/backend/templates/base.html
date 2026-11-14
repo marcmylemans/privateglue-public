@@ -6,7 +6,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta name="color-scheme" content="light dark">
   <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     /* Apply the saved theme before first paint so the page never flashes the wrong colours. */
     (function () {
       var legacy = localStorage.getItem('theme');
@@ -73,6 +73,9 @@
         <a class="nav-link{% if request.endpoint in ['admin.list_users', 'admin.create_user', 'admin.edit_user', 'admin.reset_user_password'] %} active{% endif %}" href="{{ url_for('admin.list_users') }}">
           <i class="bi bi-people" aria-hidden="true"></i><span>Users</span>
         </a>
+        <a class="nav-link{% if request.blueprint == 'integrations' %} active{% endif %}" href="{{ url_for('integrations.list_integrations') }}">
+          <i class="bi bi-plug" aria-hidden="true"></i><span>Integrations</span>
+        </a>
         <a class="nav-link{% if request.endpoint == 'admin.about_page' %} active{% endif %}" href="{{ url_for('admin.about_page') }}">
           <i class="bi bi-hdd-stack" aria-hidden="true"></i><span>System &amp; backups</span>
         </a>
@@ -122,11 +125,21 @@
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person-circle" aria-hidden="true"></i> Profile &amp; password</a></li>
             {% if is_admin %}
-            <li><a class="dropdown-item" href="{{ url_for('admin.create_backup') }}"><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i> Create backup</a></li>
+            <li>
+              <form method="POST" action="{{ url_for('admin.create_backup') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="dropdown-item"><i class="bi bi-cloud-arrow-down" aria-hidden="true"></i> Create backup</button>
+              </form>
+            </li>
             <li><a class="dropdown-item" href="{{ url_for('admin.about_page') }}"><i class="bi bi-info-circle" aria-hidden="true"></i> System info</a></li>
             {% endif %}
             <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</a></li>
+            <li>
+              <form method="POST" action="{{ url_for('auth.logout') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right" aria-hidden="true"></i> Sign out</button>
+              </form>
+            </li>
           </ul>
         </div>
       </header>

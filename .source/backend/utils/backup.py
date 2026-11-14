@@ -1,6 +1,7 @@
 import os
 import zipfile
 import shutil
+from backend.utils import paths
 
 ALLOWED_BACKUP_MEMBERS = ("app.db", "secret.key")
 
@@ -16,7 +17,8 @@ def _is_allowed_member(member_name):
         member_name.endswith(".md") or member_name.endswith(".meta.json")
     )
 
-def extract_backup_zip(zip_path, extract_to="/app"):
+def extract_backup_zip(zip_path, extract_to=None):
+    extract_to = extract_to or paths.HOME
     temp_dir = os.path.join(extract_to, "temp_restore")
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)

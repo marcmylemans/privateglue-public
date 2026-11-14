@@ -1,0 +1,52 @@
+# PrivateGlue on the host network
+#
+# Use this file INSTEAD of docker-compose.yml when PrivateGlue should sit directly on the
+# network of the machine it runs on. That is what "Scan from this server" needs to see
+# MAC addresses, and it lets the scan reach every network the host itself can reach.
+#
+#   echo "SECRET_KEY=$(openssl rand -hex 32)" > .env
+#   docker compose -f docker-compose.host.yml up -d
+# Then open http://<address of this machine>:5000
+#
+# What is different from docker-compose.yml:
+#   - No port mapping. The app listens on PRIVATEGLUE_PORT (default 5000) on every address
+#     of the host, so protect it with the host firewall or a reverse proxy.
+#   - Scanning from the server is on by default here (ALLOW_SERVER_SCAN).
+#   - Linux hosts only. Docker Desktop on Windows and macOS does not give containers the
+#     real host network.
+#
+# Moving from docker-compose.yml: put this file in the SAME folder, stop the old one
+# (docker compose down, without -v), then start this one. Your data stays where it is: the
+# folders are the same, and so is the secretkey volume, because its name comes from the
+# folder name.
+
+services:
+  privateglue:
+    image: ghcr.io/marcmylemans/privateglue:${PRIVATEGLUE_TAG:-latest}
+    network_mode: host
+    command: ["gunicorn", "--bind", "0.0.0.0:${PRIVATEGLUE_PORT:-5000}", "--workers", "2",
+              "--access-logfile", "-", "--error-logfile", "-", "backend.app:app"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PRIVATEGLUE_PORT:-5000}/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    environment:
+      # Required. Signs login sessions.
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env, e.g. echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env}
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0}
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      ALLOW_SERVER_SCAN: ${ALLOW_SERVER_SCAN:-true}
+      INTEGRATIONS_SCHEDULER: ${INTEGRATIONS_SCHEDULER:-on}
+    volumes:
+      - ./notes:/app/notes      # Markdown notes
+      - ./data:/app/data        # SQLite database
+      - ./backups:/app/backups  # backups created from the UI
+      - secretkey:/app/secret   # encryption key for stored credentials: back this up!
+    restart: unless-stopped
+
+volumes:
+  secretkey:

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% block title %}{{ integration.name }} · Integrations · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Integrations', url_for('integrations.list_integrations')), (integration.name, None)]) }}{% endblock %}
+
+{% block content %}
+<div class="page-with-aside">
+{% call ui.page_header(integration.name, integration.description, icon=integration.icon) %}
+  {% if has_guide %}
+  <a class="btn btn-outline-secondary" href="{{ url_for('integrations.guide', key=integration.key) }}"><i class="bi bi-book" aria-hidden="true"></i> Setup guide</a>
+  {% endif %}
+{% endcall %}
+
+<div class="with-aside">
+<form method="POST" class="panel" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="form-section">
+    <div class="form-check form-switch mb-3">
+      <input class="form-check-input" type="checkbox" role="switch" name="enabled" id="enabled" {% if row.enabled %}checked{% endif %}>
+      <label class="form-check-label fw-semibold" for="enabled">Turn this integration on</label>
+    </div>
+    {% if integration.can_sync %}
+    <div>
+      <label for="interval_minutes" class="form-label">Automatic sync</label>
+      <select class="form-select" name="interval_minutes" id="interval_minutes">
+        {% for value, label in interval_choices %}
+          <option value="{{ value }}" {% if row.interval_minutes == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">With "Manual only" nothing happens until you press Sync now.</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="form-section">
+    {% for field in integration.fields %}
+    {% set value = settings.get(field.name, field.default) %}
+    <div class="mb-3">
+      {% if field.kind == 'checkbox' %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="{{ field.name }}" id="f-{{ field.name }}" {% if value %}checked{% endif %}>
+          <label class="form-check-label" for="f-{{ field.name }}">{{ field.label }}</label>
+        </div>
+      {% else %}
+        <label for="f-{{ field.name }}" class="form-label">{{ field.label }}{% if field.required %} <span class="text-danger" aria-hidden="true">*</span>{% endif %}</label>
+        {% if field.secret %}
+          <input type="password" class="form-control" name="{{ field.name }}" id="f-{{ field.name }}" autocomplete="new-password"
+                 placeholder="{{ 'Saved. Leave empty to keep it.' if field.name in saved_secrets else field.placeholder }}"
+                 {% if field.required and field.name not in saved_secrets %}required{% endif %}>
+          {% if field.name in saved_secrets and not field.required %}
+          <div class="form-check mt-1">
+            <input class="form-check-input" type="checkbox" name="clear_{{ field.name }}" id="clear-{{ field.name }}">
+            <label class="form-check-label small" for="clear-{{ field.name }}">Remove the saved value</label>
+          </div>
+          {% endif %}
+        {% elif field.kind == 'select' %}
+          <select class="form-select" name="{{ field.name }}" id="f-{{ field.name }}">
+            {% for choice_value, choice_label in field.choices %}
+              <option value="{{ choice_value }}" {% if value|string == choice_value|string %}selected{% endif %}>{{ choice_label }}</option>
+            {% endfor %}
+          </select>
+        {% elif field.kind == 'textarea' %}
+          <textarea class="form-control" name="{{ field.name }}" id="f-{{ field.name }}" rows="4" placeholder="{{ field.placeholder }}" {% if field.required %}required{% endif %}>{{ value or '' }}</textarea>
+        {% else %}
+          <input type="{{ 'number' if field.kind == 'number' else ('url' if field.kind == 'url' else 'text') }}" class="form-control"
+                 name="{{ field.name }}" id="f-{{ field.name }}" value="{{ value if value is not none else '' }}"
+                 placeholder="{{ field.placeholder }}" {% if field.required %}required{% endif %} spellcheck="false" autocapitalize="none">
+        {% endif %}
+      {% endif %}
+      {% if field.help %}<div class="form-text">{{ field.help }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <p class="small text-body-secondary mb-0"><i class="bi bi-shield-lock" aria-hidden="true"></i> Tokens and passwords are stored encrypted, with the same key as your credentials, and are never shown again.</p>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg" aria-hidden="true"></i> Save</button>
+    <a href="{{ url_for('integrations.list_integrations') }}" class="btn btn-outline-secondary">Back</a>
+  </div>
+</form>
+
+<aside aria-label="Run and history">
+<div class="panel">
+  <div class="panel-header flex-wrap gap-2">
+    <h2 class="panel-title"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Run</h2>
+    <div class="d-flex flex-wrap gap-2">
+      <form method="POST" action="{{ url_for('integrations.test_connection', key=integration.key) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-plug" aria-hidden="true"></i> Test connection</button>
+      </form>
+      {% if integration.can_sync %}
+      <form method="POST" action="{{ url_for('integrations.sync_now', key=integration.key) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-primary btn-sm" {% if not row.enabled %}disabled title="Turn the integration on first"{% endif %}><i class="bi bi-play-fill" aria-hidden="true"></i> Sync now</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div class="panel-body">
+    <p class="mb-2">
+      {% if row.enabled %}
+        <span class="status-dot ok me-1" aria-hidden="true"></span><strong>On</strong>
+        <span class="text-body-secondary">· {{ dict(interval_choices).get(row.interval_minutes, 'Manual only') | lower if integration.can_sync else 'no sync' }}</span>
+      {% else %}
+        <span class="status-dot me-1" aria-hidden="true"></span><strong>Off</strong>
+        <span class="text-body-secondary">· turn it on and save to be able to sync</span>
+      {% endif %}
+    </p>
+    <p class="small text-body-secondary">Both buttons use the saved settings. Save first when you changed something.</p>
+    {% if row.running_since %}
+      <p class="mb-2"><span class="status-dot warn me-1" aria-hidden="true"></span>A sync is running since {{ row.running_since.strftime('%H:%M') }} UTC. Reload to see the result.</p>
+    {% endif %}
+    {% if runs %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th scope="col">Started (UTC)</th><th scope="col">By</th><th scope="col">Result</th></tr></thead>
+        <tbody>
+          {% for run in runs %}
+          <tr>
+            <td class="text-nowrap small">{{ run.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+            <td class="small">{{ run.trigger }}</td>
+            <td class="small">
+              <span class="status-dot {{ {'ok': 'ok', 'warning': 'warn', 'error': 'bad', 'running': 'warn'}.get(run.status, '') }} me-1" aria-hidden="true"></span>
+              {{ run.summary or run.status }}
+              {% if run.details %}
+              <details class="mt-1"><summary>Details</summary><pre class="small mb-0" style="white-space: pre-wrap">{{ run.details }}</pre></details>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="text-body-tertiary small mb-0">No runs yet.</p>
+    {% endif %}
+  </div>
+</div>
+</aside>
+</div>
+</div>
+{% endblock %}

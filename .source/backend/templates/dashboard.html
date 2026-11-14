@@ -14,7 +14,12 @@
       <li><a class="dropdown-item" href="{{ url_for('notes.create_note') }}"><i class="bi bi-journal-text" aria-hidden="true"></i> Note</a></li>
       <li><a class="dropdown-item" href="{{ url_for('credentials.add_credential') }}"><i class="bi bi-key" aria-hidden="true"></i> Credential</a></li>
       <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item" href="{{ url_for('devices.import_devices') }}"><i class="bi bi-upload" aria-hidden="true"></i> Import devices from CSV</a></li>
+      <li><h6 class="dropdown-header">Many devices at once</h6></li>
+      <li><a class="dropdown-item" href="{{ url_for('devices.import_devices') }}"><i class="bi bi-upload" aria-hidden="true"></i> Import from a CSV file</a></li>
+      <li><a class="dropdown-item" href="{{ url_for('devices.show_discovered_devices') }}"><i class="bi bi-radar" aria-hidden="true"></i> Scan your network (probe)</a></li>
+      {% if is_admin %}
+      <li><a class="dropdown-item" href="{{ url_for('integrations.list_integrations') }}"><i class="bi bi-plug" aria-hidden="true"></i> Sync from another system</a></li>
+      {% endif %}
     </ul>
   </div>
   {% endif %}

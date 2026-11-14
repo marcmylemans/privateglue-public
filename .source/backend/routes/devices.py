@@ -1,13 +1,16 @@
 import os
 import io, csv
-import secrets
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, jsonify, abort
-from flask_login import login_required
+import ipaddress
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, jsonify, abort, current_app
+from datetime import datetime
+from flask_login import login_required, current_user
 from backend.extensions import db, limiter
 from backend.models.devices import Device
 from backend.routes.notes import get_notes_linked_to_device
 from backend.models.credentials import Credential
 from backend.utils.rbac import admin_required, editor_required, readonly_required
+from backend.utils.security import constant_time_equals
+from backend.utils import netscan, probe_store
 from backend.utils.proxmox import get_proxmox_client, fetch_proxmox_details
 from proxmoxer import ProxmoxAPI
 from requests.exceptions import HTTPError
@@ -15,16 +18,6 @@ from werkzeug.utils import secure_filename
 
 
 devices_bp = Blueprint("devices", __name__, template_folder="../templates")
-
-discovered_devices_cache = []  # In-memory cache for demo; use DB for production
-
-API_KEY_PATH = os.path.join(os.path.dirname(__file__), '../../data/probe_api_key.txt')
-def get_or_create_probe_api_key():
-    # Atomic create-or-read, so concurrent gunicorn workers all end up with the same key.
-    from backend.utils.encryption import load_or_create_secret_file
-    path = os.path.normpath(API_KEY_PATH)
-    return load_or_create_secret_file(path, lambda: secrets.token_urlsafe(32).encode()).decode()
-API_KEY = get_or_create_probe_api_key()
 
 # --- ROUTES ---
 
@@ -73,8 +66,7 @@ def list_devices():
 
     discovered_count = 0
     try:
-        from backend.routes.devices import discovered_devices_cache
-        discovered_count = len(discovered_devices_cache)
+        discovered_count = len(probe_store.load_discovered()[0])
     except Exception:
         pass
 
@@ -183,6 +175,29 @@ def delete_device(id):
     return redirect(url_for("devices.list_devices"))
 
 
+@devices_bp.route("/devices/delete-selected", methods=["POST"])
+@login_required
+@admin_required
+def delete_selected_devices():
+    """Delete the devices ticked in the list. Useful after an import brought in too much."""
+    ids = []
+    for raw in request.form.getlist("ids"):
+        try:
+            ids.append(int(raw))
+        except ValueError:
+            continue
+    devices = Device.query.filter(Device.id.in_(ids)).all() if ids else []
+    for device in devices:
+        device.credentials = []
+        db.session.delete(device)
+    db.session.commit()
+    if devices:
+        flash(f"{len(devices)} device{'s' if len(devices) != 1 else ''} deleted.", "success")
+    else:
+        flash("No devices were selected.", "warning")
+    return redirect(url_for("devices.list_devices"))
+
+
 @devices_bp.route("/devices/view/<int:id>")
 @login_required
 @readonly_required
@@ -196,9 +211,22 @@ def view_device(id):
         device=device,
         linked_notes=linked_notes,
         credentials=credentials,
+        sources=_device_sources(device.id),
         snmp_eligible=_snmp_eligible(device),
         is_proxmox=(device.operating_system or "").lower() in ("proxmox", "proxmox ve"),
     )
+
+
+def _device_sources(device_id):
+    """Which integrations this device was synced from, for the "Synced from" line."""
+    from backend import integrations
+    from backend.integrations.devices import links_for_device
+    sources = []
+    for link in links_for_device(device_id):
+        integration = integrations.get(link.integration)
+        url = link.external_url if (link.external_url or "").startswith(("http://", "https://")) else None
+        sources.append({"name": integration.name if integration else link.integration, "url": url})
+    return sources
 
 
 SNMP_TYPES = {"switch", "router", "accesspoint", "firewall"}
@@ -308,7 +336,10 @@ def fetch_device_info(id):
             details=details
         )
     except Exception as e:
-        flash(f"Error fetching Proxmox info: {e}", "danger")
+        # The full error can contain internal addresses or parts of the request; keep it
+        # in the server log and show only its kind.
+        print(f"[proxmox] fetch failed for device {id}: {e}")
+        flash(f"Could not fetch Proxmox info ({type(e).__name__}). Check the address and the linked credential.", "danger")
         return redirect(url_for('devices.view_device', id=id))
 
 # Step 1: wizard entry point (GET shows form; POST processes upload)
@@ -413,72 +444,101 @@ def import_devices_template():
         headers={'Content-Disposition':'attachment; filename=devices_template.csv'}
     )
 
+def _clean_discovered(entry):
+    """Keep only the known device fields of a probe result, as short plain strings.
+    The probe is outside the app, so nothing it sends is trusted."""
+    clean = {}
+    for field in DEVICE_FIELDS:
+        value = entry.get(field)
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            clean[field] = str(value).strip()[:255]
+    # An entry is only useful with a real IP address; anything else is dropped by the caller.
+    try:
+        clean["ip_address"] = str(ipaddress.ip_address(clean.get("ip_address", "")))
+    except ValueError:
+        clean.pop("ip_address", None)
+    return clean
+
+
 @devices_bp.route('/api/discovered-devices', methods=['POST'])
 @limiter.limit("30 per minute")
 def api_discovered_devices():
-    if request.headers.get("X-API-KEY") != API_KEY:
-        abort(401)
-    data = request.get_json(silent=True) or {}
-    devices = data.get('devices', [])
-    if not isinstance(devices, list):
-        abort(400)
-    if len(devices) > 5000:
-        abort(413)
-    global discovered_devices_cache
-    discovered_devices_cache = devices
-    return jsonify({'status': 'ok', 'count': len(devices)})
+    if not constant_time_equals(request.headers.get("X-API-KEY"), probe_store.get_api_key()):
+        return jsonify({'status': 'error', 'error': 'Invalid or missing API key.'}), 401
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict) or not isinstance(data.get('devices'), list):
+        return jsonify({'status': 'error', 'error': 'Expected JSON like {"devices": [...]}.'}), 400
+    devices = data['devices']
+    if len(devices) > probe_store.MAX_DEVICES:
+        return jsonify({'status': 'error', 'error': f'Too many devices (limit {probe_store.MAX_DEVICES}).'}), 413
+    cleaned = [c for c in (_clean_discovered(d) for d in devices if isinstance(d, dict)) if c.get('ip_address')]
+    probe_store.save_discovered(cleaned)
+    return jsonify({'status': 'ok', 'count': len(cleaned)})
+
 
 @devices_bp.route('/devices/discovered')
 @login_required
 @editor_required
 def show_discovered_devices():
-    global discovered_devices_cache
+    discovered, batch, received_at = probe_store.load_discovered()
 
     # Fetch existing devices to check for duplicates
     existing_devices = Device.query.with_entities(Device.hostname, Device.ip_address, Device.mac_address).all()
-
-    # Create sets for individual fields to check partial matches
-    existing_hostnames = set(d.hostname for d in existing_devices if d.hostname)
+    existing_hostnames = set(d.hostname.lower() for d in existing_devices if d.hostname)
     existing_ips = set(d.ip_address for d in existing_devices if d.ip_address)
-    existing_macs = set(d.mac_address for d in existing_devices if d.mac_address)
+    existing_macs = set(_mac_key(d.mac_address) for d in existing_devices if d.mac_address)
 
-    # Identify duplicates
     combined_data = []
-    for d in discovered_devices_cache:
+    for d in discovered:
         duplicate_fields = []
-        if d.get('hostname') in existing_hostnames:
+        if d.get('hostname') and d['hostname'].lower() in existing_hostnames:
             duplicate_fields.append('hostname')
         if d.get('ip_address') in existing_ips:
             duplicate_fields.append('ip_address')
-        if d.get('mac_address') in existing_macs:
+        if d.get('mac_address') and _mac_key(d['mac_address']) in existing_macs:
             duplicate_fields.append('mac_address')
         combined_data.append((d, duplicate_fields))
 
-    return render_template('devices/discovered.html', combined_data=combined_data)
+    is_admin = getattr(current_user, "role", None) == "admin"
+    return render_template(
+        'devices/discovered.html', combined_data=combined_data, batch=batch,
+        received_at=datetime.utcfromtimestamp(received_at) if received_at else None,
+        probe_key=probe_store.get_api_key() if is_admin else None,
+        probe_server=request.url_root.rstrip('/'),
+        scan_enabled=netscan.is_enabled(),
+        scan_state=netscan.read_state() if netscan.is_enabled() else {"status": "idle"},
+        scan_suggestion=netscan.suggested_network() if (netscan.is_enabled() and is_admin) else "",
+        scan_server_address=netscan.server_address() if (netscan.is_enabled() and is_admin) else "",
+    )
+
+
+def _mac_key(value):
+    """A MAC without separators and in lower case, so AA-BB-.. and aa:bb:.. compare equal."""
+    return "".join(c for c in str(value).lower() if c in "0123456789abcdef")
+
 
 @devices_bp.route('/devices/discovered/import', methods=['POST'])
 @login_required
 @editor_required
 def import_discovered_devices():
-    global discovered_devices_cache
-    selected = request.form.getlist('selected')
-    created = 0
+    discovered, batch, _ = probe_store.load_discovered()
+    # The checkboxes refer to positions in the list. If the probe sent a new list after the
+    # page was opened, those positions now mean other devices: ask to review again.
+    if request.form.get('batch', '') != batch:
+        flash('The probe sent a new list in the meantime. Review it again before importing.', 'warning')
+        return redirect(url_for('devices.show_discovered_devices'))
 
-    # Fetch existing devices to check for duplicates
+    selected = set(request.form.getlist('selected'))
     existing_devices = Device.query.with_entities(Device.hostname, Device.ip_address, Device.mac_address).all()
     existing_set = set((d.hostname, d.ip_address, d.mac_address) for d in existing_devices)
 
-    for idx, d in enumerate(discovered_devices_cache):
-        if str(idx) not in selected:
+    created = 0
+    for idx, d in enumerate(discovered):
+        if str(idx) not in selected or not d.get('ip_address'):
             continue
-        if not d.get('ip_address'):
-            continue
-
-        # Check for duplicates
         if (d.get('hostname'), d.get('ip_address'), d.get('mac_address')) in existing_set:
             continue
-
-        device = Device(
+        db.session.add(Device(
             hostname=d.get('hostname') or d.get('ip_address'),
             ip_address=d.get('ip_address'),
             mac_address=d.get('mac_address'),
@@ -488,11 +548,44 @@ def import_discovered_devices():
             serial_number=d.get('serial_number'),
             license_key=d.get('license_key'),
             location=d.get('location'),
-        )
-        db.session.add(device)
+        ))
         created += 1
 
     db.session.commit()
-    discovered_devices_cache = []
+    probe_store.clear_discovered()
     flash(f'Imported {created} discovered devices.', 'success')
     return redirect(url_for('devices.list_devices'))
+
+
+@devices_bp.route('/devices/discovered/clear', methods=['POST'])
+@login_required
+@editor_required
+def clear_discovered_devices():
+    probe_store.clear_discovered()
+    flash('The discovered list was cleared.', 'info')
+    return redirect(url_for('devices.show_discovered_devices'))
+
+
+@devices_bp.route('/devices/discovered/scan', methods=['POST'])
+@login_required
+@admin_required
+def scan_from_server():
+    """Start a scan of one private network from the server itself (only when enabled)."""
+    if current_app.config.get("DEMO_MODE"):
+        flash("Scanning is turned off in demo mode.", "warning")
+        return redirect(url_for('devices.show_discovered_devices'))
+    try:
+        network, _ = netscan.start_scan(request.form.get('network', ''), use_tcp=request.form.get('use_tcp') == 'on')
+        flash(f'Scanning {network}. This page refreshes by itself until the scan is done.', 'info')
+    except netscan.ScanError as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('devices.show_discovered_devices') + '#server-scan')
+
+
+@devices_bp.route('/devices/discovered/rotate-key', methods=['POST'])
+@login_required
+@admin_required
+def rotate_probe_key():
+    probe_store.rotate_api_key()
+    flash('New probe key created. Update the key on every machine that runs the probe.', 'success')
+    return redirect(url_for('devices.show_discovered_devices'))

@@ -7,7 +7,7 @@
   <p class="text-body-secondary mb-4">Your role doesn't allow this action. Ask an administrator if you need access.</p>
   <div class="d-flex flex-wrap justify-content-center gap-2">
     <a href="{{ url_for('index') }}" class="btn btn-primary"><i class="bi bi-house" aria-hidden="true"></i> Go to dashboard</a>
-    <button type="button" class="btn btn-outline-secondary" onclick="history.back()"><i class="bi bi-arrow-left" aria-hidden="true"></i> Go back</button>
+    <button type="button" class="btn btn-outline-secondary" data-history-back><i class="bi bi-arrow-left" aria-hidden="true"></i> Go back</button>
   </div>
 </div>
 {% endblock %}

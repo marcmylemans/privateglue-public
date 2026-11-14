@@ -4,6 +4,112 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ---
 
+## Unreleased
+
+### Added
+- **Install on Proxmox VE without Docker.** One command in the Proxmox shell creates an LXC
+  container and installs PrivateGlue in it as a systemd service, built on the community-scripts
+  engine. `update` inside the container moves to the newest release and keeps your data. See
+  "Install on Proxmox VE" in the guide.
+- `PRIVATEGLUE_HOME`: the folder that holds data, notes, backups and the encryption key, for
+  installs without Docker. The default is `/app`, so Docker installs do not change.
+- Every release now comes with `privateglue-<version>.tar.gz` on the public repo: the app
+  without Docker files or tests, which is what the Proxmox script downloads.
+
+### Security
+- **Sign-up is closed after the first account.** `/register` only works on a new install to
+  create the first admin. Before, anyone who could reach the login page could create a
+  read-only account, and read-only accounts can read every stored password. Admins create
+  accounts under Users.
+- Changing a password (or an admin changing a user's role or password) signs out every other
+  session of that user.
+- "Must change password at next sign-in" is now enforced: the user can reach nothing else first.
+- The last administrator can no longer delete their own account (that would reopen the setup
+  wizard for the next visitor).
+- Signing out and creating a backup need a button press (POST). A link or an image in a note
+  can no longer trigger them.
+- Pages send a Content-Security-Policy: only the app's own scripts run. External images in
+  notes still load over https; plain http images no longer do.
+- Pages are no longer stored in browser or proxy caches.
+- Redirects after sign-in and after a "no permission" message only go to pages of this app.
+- The username check no longer answers anonymous visitors.
+- Extra login rate limit per username (20 attempts an hour), next to the existing limit per address.
+- New `TRUSTED_PROXIES` setting so rate limits see real visitor addresses behind a reverse proxy.
+- Probe results are reduced to the known device fields before they are kept.
+- Proxmox fetch errors no longer show internal details on the page.
+
+- Updated Flask, Markdown, bleach, cryptography and requests to versions without known
+  vulnerabilities (21 known issues in the old versions).
+
+### Added
+- **A user guide.** Installing, configuration, updating, backup and restore, reverse proxy,
+  users, devices, network scan, integrations, notes, credentials, security and
+  troubleshooting. It is written in `documentation/wiki` and published to the wiki of
+  privateglue-public on every release.
+- **Scan from this server.** Administrators can scan a private network straight from
+  PrivateGlue under Devices > Discovered, without the separate probe. The result lands in
+  the same review list. It is off unless you set `ALLOW_SERVER_SCAN=true`, only accepts
+  private ranges and at most 1024 addresses per scan, and can also find machines that do
+  not answer ping by trying a few common ports.
+- **`docker-compose.host.yml`**: runs PrivateGlue on the host network. The scan needs that
+  to see MAC addresses. It uses the same folders and key volume, so you can switch an
+  existing install by swapping the compose file.
+- The image now contains `ping` and `ip` for the scan.
+
+### Changed
+- **Every way to add devices is now in plain sight.** The device list has an Import menu
+  (CSV file, network probe, sync from another system), the Add device page shows the same
+  options next to the form, and so do the empty device list and the dashboard's New menu.
+- The Discovered devices page always explains the probe in three steps, with a download
+  link, the address and (for administrators) the key. Before, it was an empty page until a
+  probe had already run.
+- Device list: click a column header to sort. Administrators can tick several devices and
+  delete them in one go, which helps after an import brought in too much.
+- A device that came from an integration shows "Synced from" with a link to its record in
+  the other system.
+- Integrations: each one has a setup guide that opens inside the app, and Test connection
+  and Sync now sit next to the settings instead of below them, with the current state.
+- The device page's "Integrations" panel (live Proxmox and SNMP details) is now called
+  "Live details", so it is not confused with the Integrations page.
+- System page: the probe key row points to where the key is managed.
+
+### Fixed
+- Network probe: discovered devices no longer come and go between page loads. The list was
+  kept in memory by whichever worker received it; it is now stored in the data folder and
+  shared by all workers, and survives a restart.
+- Network probe: importing can no longer pick the wrong devices when the probe sends a new
+  list while the review page is open.
+
+### Changed
+- Existing installs: one column is added to the user table automatically on start. Everyone
+  stays signed in.
+
+### Added
+- Network probe set-up for administrators under Devices > Discovered: the address, the API
+  key (hidden until shown, with a copy button) and a button to create a new key. Before, the
+  key could only be read from a file in the data volume.
+- "Clear list" on the discovered devices page, and the time the list was received.
+- The probe API answers with a readable JSON error and only keeps entries with a valid IP address.
+- Integrations (Administration > Integrations, admins only): a common home for modules that
+  connect PrivateGlue to other systems. Per integration: settings, test connection, sync now,
+  an optional automatic schedule and a run history. Tokens are stored encrypted. Everything
+  is off until you turn it on. See `documentation/integrations/README.md`.
+- First five integrations, all off until you turn them on. Each has its own page under
+  `documentation/integrations/`:
+  - **NetBox**: imports devices and, optionally, virtual machines from NetBox 3.7 to 4.x
+    (read-only, v1 and v2 tokens, status, site and tag filters).
+  - **Proxmox VE**: imports cluster nodes, virtual machines and containers with a read-only
+    API token.
+  - **UniFi Network**: imports UniFi gateways, switches and access points, and optionally
+    connected clients, using an API key.
+  - **Microsoft Intune**: imports managed devices (name, serial, MAC, OS, version, type)
+    through Microsoft Graph with a read-only app registration.
+  - **GitHub notes sync**: pushes your notes to a GitHub repository as backup and history,
+    or pulls them from one. One direction per run, nothing is ever deleted.
+- `INTEGRATIONS_SCHEDULER=off` turns off automatic syncs.
+
+---
+
 ## [0.6.8-BETA2] - 2025-05-20
 
 ### Added

@@ -6,10 +6,17 @@ WORKDIR /app
 RUN groupadd --system --gid 1000 appgroup \
     && useradd --system --uid 1000 --gid appgroup --home /app --no-create-home appuser
 
+# ping and ip: used by the optional "scan from this server" feature (off by default).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends iputils-ping iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ /app/backend
+# Setup guides for the integrations, shown inside the app.
+COPY documentation/integrations/ /app/documentation/integrations
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 
 # Data, notes, backups, and secret dirs are bind/volume mounted in docker-compose.

@@ -78,7 +78,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='vendor/highlight/highlight.min.js') }}"></script>
-<script>
+<script nonce="{{ csp_nonce }}">
   (function () {
     var input = document.getElementById('tags');
     function current() { return input.value.split(',').map(function (t) { return t.trim(); }).filter(Boolean); }

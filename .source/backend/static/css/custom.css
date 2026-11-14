@@ -471,3 +471,60 @@ textarea.editor-textarea { flex: 1; border: 0; border-radius: 0; font-family: va
 @media (min-width: 1200px) { .col-xl-3 .checklist-item .mono { display: none; } }
 [data-bs-theme="dark"] .btn-outline-danger { --bs-btn-color: #f87171; --bs-btn-border-color: rgba(248, 113, 113, .5); --bs-btn-hover-bg: #dc2626; --bs-btn-hover-border-color: #dc2626; --bs-btn-hover-color: #fff; }
 [data-bs-theme="dark"] .dropdown-item.text-danger { color: #f87171 !important; }
+
+/* ---------- Ways to add devices ---------- */
+.way-list { list-style: none; margin: 0; padding: 0; }
+.way-list li + li { border-top: 1px solid var(--pg-border); }
+.way { display: flex; align-items: center; gap: .8rem; padding: .8rem 1.25rem; color: inherit; text-decoration: none; text-align: left; }
+a.way:hover, a.way:focus-visible { background: var(--pg-muted-bg); color: inherit; }
+a.way:hover .way-title, a.way:focus-visible .way-title { color: var(--pg-brand); }
+.way-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.way-title { font-weight: 600; }
+.way-desc { font-size: .875rem; color: var(--bs-secondary-color); }
+.way-go { color: var(--bs-tertiary-color); }
+.way-static .way-title { color: var(--bs-secondary-color); }
+.empty-state .way-list { max-width: 30rem; margin: 1.25rem auto 0; border: 1px solid var(--pg-border); border-radius: .75rem; overflow: hidden; }
+
+/* A form with a helper column next to it on wide screens, below it on narrow ones. */
+.with-aside { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1200px) {
+  .with-aside { grid-template-columns: minmax(0, 760px) minmax(260px, 340px); }
+  .with-aside > aside { position: sticky; top: 5rem; }
+}
+.with-aside > form.panel, .with-aside > aside > .panel:first-child { margin-top: 0; }
+
+/* Numbered steps (probe set-up) */
+.steps { list-style: none; counter-reset: step; margin: 0; padding: 0; }
+.steps > li { counter-increment: step; position: relative; padding: 0 0 1.1rem 2.6rem; }
+.steps > li:last-child { padding-bottom: 0; }
+.steps > li::before {
+  content: counter(step); position: absolute; left: 0; top: 0; width: 1.75rem; height: 1.75rem; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 600; font-size: .85rem; background: var(--pg-brand-soft); color: var(--pg-brand);
+}
+.steps .step-title { font-weight: 600; }
+.code-line { display: block; padding: .6rem .8rem; border-radius: .5rem; background: var(--pg-muted-bg); border: 1px solid var(--pg-border);
+  font-family: var(--bs-font-monospace); font-size: .82rem; white-space: pre-wrap; word-break: break-all; }
+
+/* Rendered guide pages */
+.guide-body { max-width: 46rem; }
+.guide-body h1 { display: none; }
+.guide-body h2 { font-size: 1.15rem; margin-top: 1.6rem; }
+.guide-body h3 { font-size: 1rem; margin-top: 1.2rem; }
+.guide-body table { width: 100%; margin-bottom: 1rem; border-collapse: collapse; font-size: .9rem; }
+.guide-body th, .guide-body td { border: 1px solid var(--pg-border); padding: .4rem .6rem; vertical-align: top; text-align: left; }
+.guide-body pre { background: var(--pg-muted-bg); border: 1px solid var(--pg-border); border-radius: .5rem; padding: .75rem; overflow-x: auto; }
+.guide-body code, .code-line { color: inherit; }
+.guide-body :not(pre) > code { background: var(--pg-muted-bg); padding: .1rem .3rem; border-radius: .25rem; font-size: .85em; }
+.guide-body li > p { margin-bottom: .4rem; }
+
+/* ---------- Sortable headers and selecting rows ---------- */
+.sort-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; }
+.sort-btn:hover { color: var(--bs-body-color); }
+.sort-btn:focus-visible { outline: 2px solid var(--pg-brand); outline-offset: 3px; border-radius: .25rem; }
+.sort-arrow { font-size: .75rem; opacity: .35; }
+th[aria-sort] .sort-arrow { opacity: 1; color: var(--pg-brand); }
+.select-col { width: 1%; padding-right: 0 !important; }
+.bulk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .6rem 1rem; margin-bottom: .75rem;
+  border: 1px solid var(--pg-border); border-radius: .75rem; background: var(--pg-brand-soft); font-weight: 600; }
+.bulk-bar[hidden] { display: none; }
+.code-inline { font-family: var(--bs-font-monospace); font-size: .85em; color: inherit; background: var(--pg-muted-bg); padding: .1rem .3rem; border-radius: .25rem; }

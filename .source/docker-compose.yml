@@ -9,6 +9,9 @@
 # https://privateglue.app/docker-compose.yml. It works with plain docker compose,
 # Dockge and Portainer: values come from the .env file next to it.
 #
+# Want PrivateGlue on the host network (needed to see MAC addresses when scanning from the
+# server)? Use docker-compose.host.yml instead of this file.
+#
 # Build from source instead of pulling the image:
 #   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 
@@ -23,6 +26,17 @@ services:
       # Optional: user/group id that owns the data folders (default 1000:1000).
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
+      # Optional: number of reverse proxies in front of the app (usually 1). Needed for the
+      # login rate limit to see real visitor addresses. Leave at 0 without a proxy.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0}
+      # Optional: "true" when the app is only reached over HTTPS (secure cookies, HSTS).
+      FORCE_HTTPS: ${FORCE_HTTPS:-false}
+      # Optional: "true" lets administrators scan a private network from this server
+      # (Devices > Discovered). Leave it off on a server you share with others.
+      # For MAC addresses too, use docker-compose.host.yml instead of this file.
+      ALLOW_SERVER_SCAN: ${ALLOW_SERVER_SCAN:-false}
+      # Optional: set to "off" to stop integrations from syncing on a schedule.
+      INTEGRATIONS_SCHEDULER: ${INTEGRATIONS_SCHEDULER:-on}
     volumes:
       - ./notes:/app/notes      # Markdown notes
       - ./data:/app/data        # SQLite database

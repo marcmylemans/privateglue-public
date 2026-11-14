@@ -36,13 +36,23 @@
           {{ ui.fact('Location', device.location) }}
           {{ ui.fact('Serial number', device.serial_number, mono=True, copy=True) }}
           {{ ui.fact('License key / asset tag', device.license_key, mono=True, copy=True, secret=True) }}
+          {% if sources %}
+          <div class="fact">
+            <dt>Synced from</dt>
+            <dd>
+              {% for source in sources %}
+                {% if source.url %}<a href="{{ source.url }}" target="_blank" rel="noopener noreferrer">{{ source.name }} <i class="bi bi-box-arrow-up-right small" aria-hidden="true"></i><span class="visually-hidden">(opens in a new tab)</span></a>{% else %}{{ source.name }}{% endif %}{% if not loop.last %}<span class="text-body-tertiary mx-1">·</span>{% endif %}
+              {% endfor %}
+            </dd>
+          </div>
+          {% endif %}
         </dl>
       </div>
     </section>
 
     {% if is_proxmox or snmp_eligible %}
     <section class="panel" aria-labelledby="integrationsTitle">
-      <div class="panel-header"><h2 class="panel-title" id="integrationsTitle"><i class="bi bi-plug" aria-hidden="true"></i> Integrations</h2></div>
+      <div class="panel-header"><h2 class="panel-title" id="integrationsTitle"><i class="bi bi-activity" aria-hidden="true"></i> Live details</h2></div>
       {% if is_proxmox %}
       <div class="integration-row">
         <span class="item-icon"><i class="bi bi-hdd-stack" aria-hidden="true"></i></span>
@@ -134,7 +144,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
   (function () {
     // "Fetch details" can take a few seconds: show progress instead of a frozen page.
     document.querySelectorAll('[data-loading-text]').forEach(function (a) {

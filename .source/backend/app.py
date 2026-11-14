@@ -2,7 +2,8 @@ import os, json
 import re
 from datetime import datetime
 from markupsafe import Markup, escape
-from flask import Flask, render_template, request, session, flash
+from flask import Flask, render_template, request, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from datetime import timedelta
 from backend.models.users import User
@@ -17,12 +18,18 @@ from backend.routes.credentials import credentials_bp
 from backend.utils.setup_users import initialize_default_users
 from backend.utils.db_upgrade import check_and_upgrade_database
 from backend.routes.network import network_bp
+from backend.app_security import init_security
+from backend.utils import paths
+from backend.routes.integrations import integrations_bp
+from backend.integrations import models as _integration_models  # noqa: F401  (registers the tables)
+from backend.integrations import scheduler as integration_scheduler
 
 # Ensure SQLite path is available
-os.makedirs("/app/data", exist_ok=True)
+for _folder in (paths.DATA_DIR, paths.NOTES_DIR, paths.BACKUP_DIR):
+    os.makedirs(_folder, exist_ok=True)
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////app/data/app.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + paths.DB_PATH
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["DEMO_MODE"] = os.environ.get("DEMO_MODE", "false").lower() == "true"
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
@@ -47,6 +54,18 @@ app.config.update(
 )
 app.config["RATELIMIT_STORAGE_URI"] = os.environ.get("RATELIMIT_STORAGE_URI", "memory://")
 
+# Behind a reverse proxy every request seems to come from the proxy, so the login rate limit
+# would count all visitors as one. TRUSTED_PROXIES is the number of proxies in front of the
+# app (usually 1). Only then are X-Forwarded-For/-Proto/-Host believed. Leave it at 0 when
+# the app is reached directly, otherwise anyone could fake their address.
+try:
+    _trusted_proxies = max(0, int(os.environ.get("TRUSTED_PROXIES", "0")))
+except ValueError:
+    _trusted_proxies = 0
+if _trusted_proxies:
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=_trusted_proxies, x_proto=_trusted_proxies,
+                            x_host=_trusted_proxies)
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
@@ -55,11 +74,7 @@ login_manager.login_message_category = "warning"
 
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    from backend.models.users import User
-    return db.session.get(User, int(user_id))
-
+init_security(app, login_manager, force_https=force_https)
 
 
 db.init_app(app)
@@ -72,7 +87,7 @@ limiter.init_app(app)
 # An exclusive file lock makes the workers initialise the database one at a time.
 import fcntl
 
-with open("/app/data/.init.lock", "w") as _init_lock:
+with open(os.path.join(paths.DATA_DIR, ".init.lock"), "w") as _init_lock:
     fcntl.flock(_init_lock, fcntl.LOCK_EX)
     try:
         with app.app_context():
@@ -88,10 +103,11 @@ app.register_blueprint(auth_bp)
 app.register_blueprint(credentials_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(network_bp, url_prefix="/network")
+app.register_blueprint(integrations_bp)
 csrf.exempt(api_discovered_devices)
 
 
-NOTES_DIR = "/app/notes"
+NOTES_DIR = paths.NOTES_DIR
 
 @app.context_processor
 def inject_globals():
@@ -101,7 +117,7 @@ def inject_globals():
     return {
         "DEMO_MODE": current_app.config.get("DEMO_MODE", False),
         "APP_NAME": current_app.config.get("APP_NAME", "PrivateGlue"),
-        "APP_VERSION": os.environ.get("APP_VERSION", ""),
+        "APP_VERSION": paths.read_version(),
         "user_role": role,
         "can_edit": role in ("admin", "editor"),
         "is_admin": role == "admin",
@@ -174,17 +190,6 @@ def forbidden_error(error):
 @app.errorhandler(500)
 def server_error(error):
     return render_template("errors/500.html"), 500
-
-
-@app.after_request
-def set_security_headers(response):
-    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-    response.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
-    if force_https:
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    return response
 
 
 def _note_snippet(text, query=None, width=140):
@@ -310,17 +315,12 @@ def search():
         total=len(device_results) + len(note_results) + len(credential_results),
     )
 
-@app.route("/flash")
-@login_required
-def flash_helper():
-    msg = request.args.get("msg", "Done")
-    cat = request.args.get("cat", "info")
-    flash(msg, cat)
-    return "", 204
-
 @app.route("/healthz")
 def healthz():
     return {"status": "ok"}, 200
+
+# Automatic integration syncs. Does nothing until an admin turns an integration on.
+integration_scheduler.start(app)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

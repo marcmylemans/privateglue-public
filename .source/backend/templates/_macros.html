@@ -32,7 +32,7 @@
 {% macro empty_state(icon, title, text=None, action_url=None, action_label=None, action_icon='plus-lg') -%}
 <div class="empty-state">
   <div class="empty-state-icon" aria-hidden="true"><i class="bi bi-{{ icon }}"></i></div>
-  <h2 class="h5 mb-1">{{ title }}</h2>
+  <h2 class="h5 {{ 'mb-1' if text else 'mb-3' }}">{{ title }}</h2>
   {% if text %}<p class="text-body-secondary mb-3">{{ text }}</p>{% endif %}
   {% if action_url %}
     <a href="{{ action_url }}" class="btn btn-primary"><i class="bi bi-{{ action_icon }}" aria-hidden="true"></i> {{ action_label }}</a>

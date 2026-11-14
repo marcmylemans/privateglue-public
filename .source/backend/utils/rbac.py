@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import flash, redirect, request, url_for
 from flask_login import current_user
+from backend.utils.security import same_site_referrer
 
 def role_required(*roles):
     def decorator(f):
@@ -12,7 +13,7 @@ def role_required(*roles):
 
             if current_user.role not in roles:
                 flash("You don't have permission to perform this action.", "warning")
-                return redirect(request.referrer or url_for("index"))
+                return redirect(same_site_referrer() or url_for("index"))
 
             return f(*args, **kwargs)
         return wrapped

@@ -1,5 +1,5 @@
 from flask import Blueprint, send_file, flash, redirect, url_for, send_from_directory, request, render_template, current_app
-from flask_login import login_required, current_user
+from flask_login import login_required, current_user, login_user
 from backend.utils.rbac import admin_required
 from backend.models.users import User
 from backend.models.devices import Device
@@ -12,6 +12,7 @@ import socket
 import platform
 from datetime import datetime
 import subprocess
+from backend.utils import paths
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -24,19 +25,19 @@ def get_git_version():
 
 def get_app_version():
     # Prefer container version from environment, fallback to git version
-    version = os.environ.get("APP_VERSION")
+    version = paths.read_version()
     if version:
         return version
     return get_git_version() or "unknown"
 
-@admin_bp.route("/admin/backup")
+@admin_bp.route("/admin/backup", methods=["POST"])
 @login_required
 @admin_required
 def create_backup():
-    db_path = "/app/data/app.db"
-    secret_path = "/app/secret/secret.key"
-    notes_dir = "/app/notes"
-    backup_dir = "/app/backups"
+    db_path = paths.DB_PATH
+    secret_path = paths.secret_key_path()
+    notes_dir = paths.NOTES_DIR
+    backup_dir = paths.BACKUP_DIR
 
     os.makedirs(backup_dir, exist_ok=True)
 
@@ -64,7 +65,7 @@ def create_backup():
 @login_required
 @admin_required
 def restore_backup():
-    backup_folder = "/app/backups"
+    backup_folder = paths.BACKUP_DIR
     backup_files = [f for f in os.listdir(backup_folder) if f.endswith(".zip")]
 
     if not backup_files:
@@ -72,7 +73,7 @@ def restore_backup():
         return redirect(url_for("auth.first_run"))
 
     backup_path = os.path.join(backup_folder, backup_files[0])  # Use the first .zip file found
-    ok, message = extract_backup_zip(backup_path, "/app")
+    ok, message = extract_backup_zip(backup_path)
     if not ok:
         flash(f"Restore failed: {message}", "danger")
         return redirect(url_for("index"))
@@ -84,7 +85,7 @@ def restore_backup():
 @login_required
 @admin_required
 def download_backup(filename):
-    backup_dir = "/app/backups"
+    backup_dir = paths.BACKUP_DIR
     return send_from_directory(backup_dir, filename, as_attachment=True)    
 
 @admin_bp.route("/admin/users")
@@ -107,12 +108,22 @@ def edit_user(user_id):
             if user.role == "admin" and new_role != "admin" and User.query.filter_by(role="admin").count() <= 1:
                 flash("This is the only admin account. Make someone else an admin first.", "danger")
                 return redirect(url_for("admin.edit_user", user_id=user.id))
-            user.role = new_role
+            if new_role != user.role:
+                user.role = new_role
+                # A role change takes effect at once: the user has to sign in again.
+                if user.id != current_user.id:
+                    user.invalidate_sessions()
 
         # Update password (optional)
         new_password = request.form.get("new_password", "").strip()
         if new_password:
+            if len(new_password) < 8:
+                flash("Password must be at least 8 characters long.", "danger")
+                return redirect(url_for("admin.edit_user", user_id=user.id))
             user.set_password(new_password)
+            if user.id == current_user.id:
+                db.session.commit()
+                login_user(user)
 
         # Force password reset flag
         user.force_password_reset = bool(request.form.get("force_password_reset"))
@@ -181,6 +192,8 @@ def create_user():
             flash("Passwords do not match.", "danger")
         elif len(password) < 8:
             flash("Password must be at least 8 characters long.", "danger")
+        elif role not in ("admin", "editor", "readonly"):
+            flash("Unknown role.", "danger")
         elif User.query.filter_by(username=username).first():
             flash("Username already exists.", "danger")
         else:
@@ -201,7 +214,7 @@ def about_page():
 
     user_count = User.query.count()
     device_count = Device.query.count()
-    note_count = len([f for f in os.listdir("/app/notes") if f.endswith(".md")])
+    note_count = len([f for f in os.listdir(paths.NOTES_DIR) if f.endswith(".md")])
     credential_count = Credential.query.count()
 
     version = get_app_version()
@@ -213,11 +226,11 @@ def about_page():
         "Python": platform.python_version(),
         "Platform": platform.system(),
         "Server time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Probe API key": "Hidden. Rotate it in the environment or data file if compromised.",
+        "Probe API key": "Shown and replaced under Devices > Discovered.",
     }
     counts = {"Users": user_count, "Devices": device_count, "Notes": note_count, "Credentials": credential_count}
 
-    backup_dir = "/app/backups"
+    backup_dir = paths.BACKUP_DIR
     backups = []
     if os.path.isdir(backup_dir):
         for name in os.listdir(backup_dir):

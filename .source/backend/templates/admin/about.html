@@ -41,7 +41,10 @@
     <section class="panel h-100" aria-labelledby="backupsTitle" id="backups">
       <div class="panel-header">
         <h2 class="panel-title" id="backupsTitle"><i class="bi bi-archive" aria-hidden="true"></i> Backups <span class="count-pill">{{ backups|length }}</span></h2>
-        <a href="{{ url_for('admin.create_backup') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create backup</a>
+        <form method="POST" action="{{ url_for('admin.create_backup') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg" aria-hidden="true"></i> Create backup</button>
+        </form>
       </div>
       {% if backups %}
       <ul class="item-list">

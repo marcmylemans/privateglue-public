@@ -9,9 +9,10 @@ from flask_login import login_required
 from backend.models.devices import Device
 from backend.utils.rbac import admin_required, editor_required, readonly_required
 from werkzeug.utils import secure_filename
+from backend.utils import paths
 
 notes_bp = Blueprint("notes", __name__, template_folder="../templates")
-NOTES_DIR = "/app/notes"
+NOTES_DIR = paths.NOTES_DIR
 META_FILE = os.path.join(NOTES_DIR, ".meta.json")
 NOTE_FILENAME_PATTERN = re.compile(r"^[\w\-. ]+\.md$")
 ALLOWED_TAGS = [

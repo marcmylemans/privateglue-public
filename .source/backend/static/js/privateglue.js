@@ -214,10 +214,44 @@
   }
 
   /* ---------------- Clickable rows ---------------- */
+  /* ---------------- Sortable tables ----------------
+     <table data-sortable> with <th data-sort>. A cell can carry data-sort-value. */
+  function bindSortable(table) {
+    var body = table.tBodies[0]; if (!body) return;
+    var headers = $all('thead th', table);
+    headers.forEach(function (th, index) {
+      if (!th.hasAttribute('data-sort')) return;
+      var btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'sort-btn';
+      while (th.firstChild) btn.appendChild(th.firstChild);
+      var arrow = document.createElement('i'); arrow.className = 'bi bi-arrow-down-up sort-arrow'; arrow.setAttribute('aria-hidden', 'true');
+      btn.appendChild(arrow); th.appendChild(btn);
+      btn.addEventListener('click', function () {
+        var asc = th.getAttribute('aria-sort') !== 'ascending';
+        headers.forEach(function (h) { h.removeAttribute('aria-sort'); var a = h.querySelector('.sort-arrow'); if (a) a.className = 'bi bi-arrow-down-up sort-arrow'; });
+        th.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
+        arrow.className = 'bi ' + (asc ? 'bi-arrow-up' : 'bi-arrow-down') + ' sort-arrow';
+        var rows = $all('tr', body).filter(function (r) { return !r.classList.contains('filter-empty'); });
+        function key(row) {
+          var cell = row.cells[index]; if (!cell) return '';
+          return (cell.hasAttribute('data-sort-value') ? cell.getAttribute('data-sort-value') : cell.textContent).trim().toLowerCase();
+        }
+        rows.sort(function (a, b) {
+          var x = key(a), y = key(b);
+          if (!x && y) return 1; if (x && !y) return -1;           // empty values always last
+          var r = x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' });
+          return asc ? r : -r;
+        });
+        var tail = $('.filter-empty', body);
+        rows.forEach(function (r) { body.insertBefore(r, tail); });
+      });
+    });
+  }
+
   function setupRowLinks() {
     document.addEventListener('click', function (e) {
       var row = e.target.closest('tr[data-href]');
-      if (!row || e.target.closest('a, button, input, label, form, .dropdown')) return;
+      if (!row || e.target.closest('a, button, input, label, form, .dropdown, .select-col')) return;
       if (e.ctrlKey || e.metaKey) { window.open(row.getAttribute('data-href'), '_blank'); return; }
       window.location = row.getAttribute('data-href');
     });
@@ -362,6 +396,7 @@
     $all('[data-pw-match]').forEach(bindMatch);
     $all('[data-username-check]').forEach(bindUsernameCheck);
     $all('[data-filter-target]').forEach(bindListFilter);
+    $all('table[data-sortable]').forEach(bindSortable);
     $all('[data-checklist-filter]').forEach(bindChecklist);
     $all('textarea[data-preview]').forEach(bindEditor);
     $all('.markdown-body').forEach(enhanceMarkdown);
@@ -376,6 +411,11 @@
       if (btn && !btn.hasAttribute('data-no-busy') && !e.target.hasAttribute('data-confirm-pending')) {
         setTimeout(function () { btn.disabled = true; btn.classList.add('is-busy'); }, 0);
       }
+    });
+
+    // "Go back" buttons on the error pages (no inline onclick: the content security policy forbids it)
+    $all('[data-history-back]').forEach(function (btn) {
+      btn.addEventListener('click', function () { window.history.back(); });
     });
 
     // Keyboard: "/" or Ctrl/Cmd+K focuses global search

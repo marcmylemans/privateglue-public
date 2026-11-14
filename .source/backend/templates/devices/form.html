@@ -14,7 +14,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="narrow-page">
+{% set show_ways = not is_edit and not clone %}
+<div class="{{ 'page-with-aside' if show_ways else 'narrow-page' }}">
 {% if clone %}
   {{ ui.page_header('Duplicate ' ~ source.hostname, 'Type, OS and location are copied. Give the new device its own name and network details.', icon='copy') }}
 {% elif is_edit %}
@@ -24,6 +25,7 @@
 {% endif %}
 
 {% set types = ['Desktop', 'Laptop', 'Server', 'VM', 'Switch', 'Router', 'Firewall', 'AccessPoint', 'NAS', 'Printer', 'IoT', 'Camera', 'Phone', 'Tablet', 'Other'] %}
+{% if show_ways %}<div class="with-aside">{% endif %}
 <form method="POST" class="panel" novalidate
       action="{% if is_edit %}{{ url_for('devices.edit_device', id=device.id) }}{% else %}{{ url_for('devices.add_device') }}{% endif %}">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -124,11 +126,20 @@
     <a href="{{ url_for('devices.view_device', id=device.id) if is_edit else (url_for('devices.view_device', id=source.id) if clone else url_for('devices.list_devices')) }}" class="btn btn-outline-secondary">Cancel</a>
   </div>
 </form>
+{% if show_ways %}
+  <aside aria-labelledby="waysTitle">
+    <div class="panel">
+      <div class="panel-header"><h2 class="panel-title" id="waysTitle"><i class="bi bi-signpost-split" aria-hidden="true"></i> More than one device?</h2></div>
+      {% set skip = 'manual' %}{% include 'devices/_ways_to_add.html' %}
+    </div>
+  </aside>
+</div>
+{% endif %}
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
+<script nonce="{{ csp_nonce }}">
   // Native constraint validation with Bootstrap styling, shown only after a submit attempt.
   document.querySelectorAll('form[novalidate]').forEach(function (form) {
     form.addEventListener('submit', function (e) {

@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% block title %}{{ integration.name }} setup guide · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Integrations', url_for('integrations.list_integrations')), (integration.name, url_for('integrations.configure', key=integration.key)), ('Setup guide', None)]) }}{% endblock %}
+
+{% block content %}
+{% call ui.page_header(integration.name ~ ' setup guide', icon='book') %}
+  <a class="btn btn-primary" href="{{ url_for('integrations.configure', key=integration.key) }}"><i class="bi bi-gear" aria-hidden="true"></i> Open settings</a>
+{% endcall %}
+<div class="panel">
+  <div class="panel-body guide-body">{{ content | safe }}</div>
+</div>
+{% endblock %}

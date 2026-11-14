@@ -1,0 +1,33 @@
+{# Every way to get devices into the inventory, so none of them is hidden.
+   Set `skip` to leave one out on the page that already is that way: 'manual', 'csv', 'probe'. #}
+<ul class="way-list">
+  {% if skip != 'manual' %}
+  <li><a class="way" href="{{ url_for('devices.add_device') }}">
+    <span class="item-icon"><i class="bi bi-plus-lg" aria-hidden="true"></i></span>
+    <span class="way-text"><span class="way-title">Add one by hand</span><span class="way-desc">Type in a single device.</span></span>
+    <i class="bi bi-chevron-right way-go" aria-hidden="true"></i></a></li>
+  {% endif %}
+  {% if skip != 'csv' %}
+  <li><a class="way" href="{{ url_for('devices.import_devices') }}">
+    <span class="item-icon"><i class="bi bi-upload" aria-hidden="true"></i></span>
+    <span class="way-text"><span class="way-title">Import a CSV file</span><span class="way-desc">Bring in a list from a spreadsheet or another tool.</span></span>
+    <i class="bi bi-chevron-right way-go" aria-hidden="true"></i></a></li>
+  {% endif %}
+  {% if skip != 'probe' %}
+  <li><a class="way" href="{{ url_for('devices.show_discovered_devices') }}">
+    <span class="item-icon"><i class="bi bi-radar" aria-hidden="true"></i></span>
+    <span class="way-text"><span class="way-title">Scan your network</span><span class="way-desc">The probe finds what is on your network. You pick what to keep.</span></span>
+    <i class="bi bi-chevron-right way-go" aria-hidden="true"></i></a></li>
+  {% endif %}
+  {% if is_admin %}
+  <li><a class="way" href="{{ url_for('integrations.list_integrations') }}">
+    <span class="item-icon"><i class="bi bi-plug" aria-hidden="true"></i></span>
+    <span class="way-text"><span class="way-title">Sync from another system</span><span class="way-desc">NetBox, Proxmox VE, UniFi Network or Microsoft Intune.</span></span>
+    <i class="bi bi-chevron-right way-go" aria-hidden="true"></i></a></li>
+  {% else %}
+  <li><div class="way way-static">
+    <span class="item-icon"><i class="bi bi-plug" aria-hidden="true"></i></span>
+    <span class="way-text"><span class="way-title">Sync from another system</span><span class="way-desc">NetBox, Proxmox VE, UniFi or Intune. An administrator sets this up under Integrations.</span></span>
+  </div></li>
+  {% endif %}
+</ul>

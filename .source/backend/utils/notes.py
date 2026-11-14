@@ -1,7 +1,9 @@
 import os
 import json
 
-NOTES_DIR = "/app/notes"
+from backend.utils import paths
+
+NOTES_DIR = paths.NOTES_DIR
 META_FILE = os.path.join(NOTES_DIR, ".meta.json")
 
 def load_all_notes():

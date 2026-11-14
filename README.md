@@ -21,6 +21,8 @@ Good for:
 
 Screenshots: [privateglue.app](https://privateglue.app/#tour)
 
+**Full guide:** installing, updating, backups, the network probe, integrations and troubleshooting are in the [wiki](https://github.com/marcmylemans/privateglue-public/wiki).
+
 ## Quick start
 
 You need Docker with Docker Compose.
@@ -33,6 +35,16 @@ docker compose up -d
 ```
 
 Open [http://localhost:5000](http://localhost:5000) and create your admin account, or restore a backup.
+
+### Proxmox VE, without Docker
+
+In the shell of your Proxmox node:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/marcmylemans/privateglue-public/main/ct/privateglue.sh)"
+```
+
+This creates an LXC container and installs PrivateGlue in it. Details are in the [guide](https://github.com/marcmylemans/privateglue-public/wiki/Install-on-Proxmox).
 
 Using **Dockge** or **Portainer**? Paste `docker-compose.yml` as the stack and put `SECRET_KEY=...` in the stack's environment (`.env`). The compose file passes it into the container.
 
