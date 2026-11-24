@@ -48,7 +48,7 @@ In Dockge or Portainer, add `SECRET_KEY` to the stack's environment.
 
 **A sync says it is already running for a long time.** A sync interrupted by a restart is released after an hour. Then start it again.
 
-**"Scan from this server" says it is turned off.** Add `ALLOW_SERVER_SCAN=true` to `.env`. If it stays off, your compose file is older than the setting: download the current one.
+**"Scan from this server" says it is turned off.** An administrator can turn it on right there with **Turn on scanning from this server**. If the page says it is disabled in the server's settings, `ALLOW_SERVER_SCAN` is set to `never`: change that in `.env` and apply it with `docker compose up -d`.
 
 **A scan finds devices but no MAC addresses.** That needs the host network. See [Network scan](Network-scan).
 

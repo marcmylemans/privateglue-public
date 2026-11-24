@@ -31,8 +31,9 @@ services:
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-0}
       # Optional: "true" when the app is only reached over HTTPS (secure cookies, HSTS).
       FORCE_HTTPS: ${FORCE_HTTPS:-false}
-      # Optional: "true" lets administrators scan a private network from this server
-      # (Devices > Discovered). Leave it off on a server you share with others.
+      # Scanning a private network from this server is a switch in the app: an administrator
+      # turns it on under Devices > Discovered. This setting overrules that switch:
+      #   "true"  always on        "never"  always off, the switch disappears (shared servers)
       # For MAC addresses too, use docker-compose.host.yml instead of this file.
       ALLOW_SERVER_SCAN: ${ALLOW_SERVER_SCAN:-false}
       # Optional: set to "off" to stop integrations from syncing on a schedule.

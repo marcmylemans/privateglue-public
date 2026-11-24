@@ -63,7 +63,18 @@
   <div class="panel-body">
     {% if not scan_enabled %}
       <p class="mb-2">The server can scan the network it is in, without the separate probe. This is turned off.</p>
-      <p class="small text-body-secondary mb-0">To turn it on, add <code class="code-inline">ALLOW_SERVER_SCAN=true</code> to the <code class="code-inline">.env</code> file next to your compose file and restart. Leave it off on a server you share with others. To find MAC addresses too, run PrivateGlue on the host network (see the deployment guide).</p>
+      {% if scan_policy == 'never' %}
+        <p class="small text-body-secondary mb-0">It is disabled in the server's settings (<code class="code-inline">ALLOW_SERVER_SCAN=never</code>), so it cannot be turned on here.</p>
+      {% elif is_admin %}
+        <form method="post" action="{{ url_for('devices.set_server_scan') }}" class="mb-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="enabled" value="on">
+          <button type="submit" class="btn btn-primary" id="scanTurnOn"><i class="bi bi-toggle-on" aria-hidden="true"></i> Turn on scanning from this server</button>
+        </form>
+        <p class="small text-body-secondary mb-0">Once on, administrators can make this server look for devices on a private network. Turn it on when the server stands in your own network; leave it off on a server you share with others. You can turn it off again here at any time.</p>
+      {% else %}
+        <p class="small text-body-secondary mb-0">An administrator can turn it on here.</p>
+      {% endif %}
     {% elif not is_admin %}
       <p class="small text-body-secondary mb-0">An administrator can scan a network from this server here.</p>
     {% else %}
@@ -96,6 +107,16 @@
           Private networks only, up to 1024 addresses per scan. The result replaces the list above; nothing is added to your devices until you import it.
           {% if scan_server_address %}This server sees itself as <span class="mono">{{ scan_server_address }}</span>. If that is not an address from your own network, PrivateGlue runs on Docker's internal network: it can still reach your network, but MAC addresses need the host network.{% endif %}
         </div>
+      {% endif %}
+      {% if scan_policy == 'switch' and scan_state.status != 'running' %}
+        <form method="post" action="{{ url_for('devices.set_server_scan') }}" class="mt-3 pt-3 border-top d-flex flex-wrap align-items-center gap-2">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="enabled" value="off">
+          <span class="small text-body-secondary">Scanning from this server is on.</span>
+          <button type="submit" class="btn btn-sm btn-outline-secondary" id="scanTurnOff"><i class="bi bi-toggle-off" aria-hidden="true"></i> Turn off</button>
+        </form>
+      {% elif scan_policy == 'on' %}
+        <p class="small text-body-secondary mt-3 pt-3 border-top mb-0">Scanning is turned on in the server's settings (<code class="code-inline">ALLOW_SERVER_SCAN=true</code>). Remove that setting to manage it from this page.</p>
       {% endif %}
     {% endif %}
   </div>

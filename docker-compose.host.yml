@@ -11,7 +11,8 @@
 # What is different from docker-compose.yml:
 #   - No port mapping. The app listens on PRIVATEGLUE_PORT (default 5000) on every address
 #     of the host, so protect it with the host firewall or a reverse proxy.
-#   - Scanning from the server is on by default here (ALLOW_SERVER_SCAN).
+#   - Scanning from the server is on here without using the switch in the app
+#     (ALLOW_SERVER_SCAN, set it to "false" to use the switch instead).
 #   - Linux hosts only. Docker Desktop on Windows and macOS does not give containers the
 #     real host network.
 #

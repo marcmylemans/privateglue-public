@@ -74,7 +74,7 @@ Two things work, and they go well together:
 
 ## Scanning the network
 
-The container sits directly on your network, so [scanning from the server](Network-scan) sees the real devices, MAC addresses included. Switch it on by setting `ALLOW_SERVER_SCAN=true` in the settings file and restarting the service.
+The container sits directly on your network, so [scanning from the server](Network-scan) sees the real devices, MAC addresses included. An administrator switches it on in the app, under **Devices > Discovered**. No change to the settings file is needed.
 
 ## Moving from Docker to the container
 

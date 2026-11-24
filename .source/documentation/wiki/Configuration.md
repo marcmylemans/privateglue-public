@@ -18,7 +18,7 @@ Installed with the Proxmox VE script? The same settings live in `/etc/privateglu
 | `PUID` / `PGID` | `1000` | The user and group id that own the data folders. Set these to match a user on the host if you want to edit notes there. |
 | `FORCE_HTTPS` | `false` | Set to `true` when PrivateGlue is only reached over HTTPS. Marks cookies as secure. |
 | `TRUSTED_PROXIES` | `0` | The number of reverse proxies in front of PrivateGlue, usually `1`. See [Reverse proxy and HTTPS](Reverse-proxy-and-HTTPS). |
-| `ALLOW_SERVER_SCAN` | `false` | Set to `true` to let administrators scan a network from the server. See [Network scan](Network-scan). |
+| `ALLOW_SERVER_SCAN` | `false` | Overrules the switch in the app for scanning from the server. `false`: an administrator decides in the app (off until turned on). `true`: always on. `never`: always off and the switch is hidden, for a server you share with others. See [Network scan](Network-scan). |
 | `INTEGRATIONS_SCHEDULER` | `on` | Set to `off` to stop integrations from syncing on a schedule. Manual syncs keep working. |
 | `PRIVATEGLUE_HOME` | `/app` | Only for installs without Docker: the folder that holds `data`, `notes`, `backups` and `secret`. The Proxmox VE script sets it to `/opt/privateglue`. Leave it alone in Docker, where the compose file decides where data lives. |
 

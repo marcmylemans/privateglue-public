@@ -506,6 +506,7 @@ def show_discovered_devices():
         probe_key=probe_store.get_api_key() if is_admin else None,
         probe_server=request.url_root.rstrip('/'),
         scan_enabled=netscan.is_enabled(),
+        scan_policy=netscan.policy(),
         scan_state=netscan.read_state() if netscan.is_enabled() else {"status": "idle"},
         scan_suggestion=netscan.suggested_network() if (netscan.is_enabled() and is_admin) else "",
         scan_server_address=netscan.server_address() if (netscan.is_enabled() and is_admin) else "",
@@ -564,6 +565,25 @@ def clear_discovered_devices():
     probe_store.clear_discovered()
     flash('The discovered list was cleared.', 'info')
     return redirect(url_for('devices.show_discovered_devices'))
+
+
+@devices_bp.route('/devices/discovered/scan/setting', methods=['POST'])
+@login_required
+@admin_required
+def set_server_scan():
+    """The switch that allows or forbids scanning from the server. Administrators only."""
+    if current_app.config.get("DEMO_MODE"):
+        flash("Scanning is turned off in demo mode.", "warning")
+        return redirect(url_for('devices.show_discovered_devices'))
+    turn_on = request.form.get('enabled') == 'on'
+    try:
+        netscan.set_enabled(turn_on, by=current_user.username)
+        print(f"[INFO] Scan from this server turned {'on' if turn_on else 'off'} by {current_user.username}")
+        flash('Scanning from this server is now on.' if turn_on else 'Scanning from this server is now off.',
+              'success' if turn_on else 'info')
+    except netscan.ScanError as exc:
+        flash(str(exc), 'danger')
+    return redirect(url_for('devices.show_discovered_devices') + '#server-scan')
 
 
 @devices_bp.route('/devices/discovered/scan', methods=['POST'])

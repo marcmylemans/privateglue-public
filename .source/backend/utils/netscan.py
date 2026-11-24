@@ -3,8 +3,10 @@
 This is the built-in counterpart of the standalone probe (the scanning code is a copy of
 its logic, kept small on purpose so the app does not depend on the probe repository).
 
-It is OFF unless ALLOW_SERVER_SCAN is "true": on a shared or hosted server, letting users
-scan from it would let them look around the hosting network.
+It is OFF until an administrator turns it on under Devices > Discovered. Whoever runs the
+server has the last word through ALLOW_SERVER_SCAN: "true" keeps it on, "never" keeps it off
+and takes the switch away. That last one is for a shared or hosted server, where a scan
+would let people look around the hosting network.
 """
 import ipaddress
 import json
@@ -20,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 from backend.utils import probe_store
 
 STATE_FILE = "scan_state.json"
+SETTING_FILE = "server_scan.json"
 MAX_HOSTS = 1024               # a /22
 WORKERS = 64
 STALE_AFTER = 15 * 60          # a scan "running" for longer than this is treated as dead
@@ -33,8 +36,44 @@ class ScanError(Exception):
     """A problem the admin can fix; the message is shown on the page."""
 
 
+def policy():
+    """What the server's own settings say about scanning:
+    "on"     ALLOW_SERVER_SCAN=true: always on, the switch in the app is fixed.
+    "never"  ALLOW_SERVER_SCAN=never: always off, administrators cannot turn it on.
+    "switch" anything else, including the default "false": the switch in the app decides."""
+    value = os.environ.get("ALLOW_SERVER_SCAN", "").strip().lower()
+    if value in ("1", "true", "yes", "on"):
+        return "on"
+    if value in ("never", "disabled", "locked"):
+        return "never"
+    return "switch"
+
+
+def _switch_is_on():
+    try:
+        with open(probe_store._path(SETTING_FILE), encoding="utf-8") as handle:
+            return json.load(handle).get("enabled") is True
+    except (OSError, ValueError, AttributeError):
+        return False  # no file, or one that cannot be read: off
+
+
 def is_enabled():
-    return os.environ.get("ALLOW_SERVER_SCAN", "false").strip().lower() in ("1", "true", "yes", "on")
+    decided = policy()
+    if decided == "switch":
+        return _switch_is_on()
+    return decided == "on"
+
+
+def set_enabled(enabled, by=""):
+    """Turn the switch in the app on or off. The file is shared by all workers."""
+    decided = policy()
+    if decided == "never":
+        raise ScanError("Scanning from this server is disabled in the server's settings.")
+    if decided == "on":
+        raise ScanError("Scanning is turned on in the server's settings (ALLOW_SERVER_SCAN), so it cannot be changed here.")
+    record = {"enabled": bool(enabled), "changed_by": str(by)[:80], "changed_at": int(time.time())}
+    probe_store._write_atomic(probe_store._path(SETTING_FILE), json.dumps(record).encode("utf-8"))
+    return bool(enabled)
 
 
 # --- input ------------------------------------------------------------------

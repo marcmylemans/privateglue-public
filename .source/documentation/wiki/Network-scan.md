@@ -8,20 +8,24 @@ There are two ways to scan. They fill the same list, and each scan replaces the 
 |---|---|---|
 | What it is | A button in PrivateGlue | A small separate program |
 | Reaches | Networks the PrivateGlue server can reach | Any network you run it in |
-| Set-up | One setting | Download, address and key |
+| Set-up | One click | Download, address and key |
 | Use it when | PrivateGlue runs inside the network you want to scan | The network is elsewhere: another VLAN, another site, a customer |
 
 ## Scan from this server
 
 ### Turn it on
 
-Add this to `.env` and apply it with `docker compose up -d`:
-
-```ini
-ALLOW_SERVER_SCAN=true
-```
+Sign in as an administrator, open **Devices > Discovered** and click **Turn on scanning from this server**. It works straight away, without a restart. **Turn off** in the same place switches it off again.
 
 It is off by default, because on a server you share with others it would let administrators look around that server's network.
+
+Whoever runs the server can overrule the switch with the `ALLOW_SERVER_SCAN` setting (see [Configuration](Configuration)):
+
+| Value | Effect |
+|---|---|
+| `false` (default) | The switch in the app decides. |
+| `true` | Always on. The switch cannot turn it off. |
+| `never` | Always off. Administrators cannot turn it on. Use this on a shared or hosted server. |
 
 ### Scan
 

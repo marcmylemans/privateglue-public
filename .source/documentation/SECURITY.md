@@ -32,10 +32,13 @@ there, which blocks the old key at once. Let the probe talk to the server over H
 
 ## Scanning from the server
 
-"Scan from this server" (Devices > Discovered) is off by default and is turned on with
-`ALLOW_SERVER_SCAN=true`. When on, administrators can make the server ping and connect to
-addresses in private ranges. Only turn it on where every administrator may look around the
-network the server is in. Leave it off on a hosted or shared server.
+"Scan from this server" (Devices > Discovered) is off by default. An administrator turns it
+on and off in the app; the change is written to the log with the account that made it. When
+on, administrators can make the server ping and connect to addresses in private ranges. Only
+turn it on where every administrator may look around the network the server is in.
+
+On a hosted or shared server, set `ALLOW_SERVER_SCAN=never`. That keeps it off and removes
+the switch, so no account in the app can turn it on. `ALLOW_SERVER_SCAN=true` keeps it on.
 
 `docker-compose.host.yml` puts the container on the host network. The app then listens on
 every address of the host, without Docker's port mapping in between: protect the port with

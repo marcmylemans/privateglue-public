@@ -6,6 +6,16 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- **Scanning from the server is now a switch in the app.** An administrator turns it on under
+  Devices > Discovered, without editing `.env` or restarting. It is still off by default.
+  `ALLOW_SERVER_SCAN=true` keeps working and keeps it on. New: `ALLOW_SERVER_SCAN=never`
+  keeps it off and hides the switch, for a server you share with others.
+
+### Changed
+- The user guide is now also published at https://privateglue.app/docs, with search. It is
+  built from the same pages as the wiki and follows every release.
+
 ### Fixed
 - **Restoring a backup now takes effect by itself.** The app reloads after a restore, so the
   restored accounts and stored passwords work straight away. Before, the old database and
