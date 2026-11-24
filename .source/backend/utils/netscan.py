@@ -192,20 +192,176 @@ def read_neighbors():
     return {}
 
 
-def lookup_hostname(ip):
+# --- names ------------------------------------------------------------------
+# Three places a device's name can come from, asked in this order:
+#   1. DNS: the reverse (PTR) record, when your DNS server has one.
+#   2. NetBIOS: Windows machines, NAS boxes and anything running Samba tell their name
+#      when asked on UDP port 137.
+#   3. mDNS: Apple devices, most Linux machines, printers and smart-home gear tell their
+#      ".local" name when asked on UDP port 5353.
+# 2 and 3 are one small question sent straight to the device, only to addresses that
+# already answered the scan. A device that does not speak them simply stays silent.
+
+NAME_TIMEOUT = 1.0
+NAME_RE = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9._-]{0,251}[A-Za-z0-9])?")
+
+
+def clean_name(name):
+    """A name as a device reported it, or "" when it is not a plausible host name. Names come
+    from machines on the network, so nothing odd is passed on."""
+    name = (name or "").strip().rstrip(".")
+    return name if NAME_RE.fullmatch(name) else ""
+
+
+def reverse_dns(ip):
     try:
-        return socket.gethostbyaddr(ip)[0]
+        name = clean_name(socket.gethostbyaddr(ip)[0])
     except (OSError, UnicodeError):
         return ""
+    return "" if name == ip else name
 
 
-def scan_network(network, alive=None, hostname=lookup_hostname, neighbors=read_neighbors, use_tcp=True):
+def _ask(ip, port, packet, timeout):
+    """Send one UDP question to one device and return its answer, or b"" for none."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(timeout)
+    try:
+        sock.sendto(packet, (ip, port))
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            data, sender = sock.recvfrom(2048)
+            if sender[0] == ip and data[:2] == packet[:2]:  # from that device, to this question
+                return data
+    except OSError:
+        pass
+    finally:
+        sock.close()
+    return b""
+
+
+def _skip_name(data, offset):
+    """Position just after the DNS-style name that starts at offset."""
+    while True:
+        length = data[offset]
+        if length == 0:
+            return offset + 1
+        if length & 0xC0 == 0xC0:  # a pointer to an earlier name: two bytes
+            return offset + 2
+        offset += 1 + length
+
+
+def parse_netbios_names(data):
+    """The machine name from a NetBIOS "node status" answer, or ""."""
+    try:
+        if len(data) < 12 or not data[2] & 0x80 or int.from_bytes(data[6:8], "big") < 1:
+            return ""
+        offset = _skip_name(data, 12)
+        offset += 10  # type, class, time to live, data length
+        count = data[offset]
+        offset += 1
+        for _ in range(count):
+            entry = data[offset:offset + 18]
+            offset += 18
+            if len(entry) < 18:
+                break
+            suffix, flags = entry[15], int.from_bytes(entry[16:18], "big")
+            # Suffix 0x00 without the group flag is the computer's own name; the same
+            # suffix with the flag is its workgroup or domain.
+            if suffix == 0x00 and not flags & 0x8000:
+                return clean_name(entry[:15].decode("ascii", errors="ignore"))
+    except IndexError:
+        pass
+    return ""
+
+
+def netbios_name(ip, port=137, timeout=NAME_TIMEOUT):
+    query_id = os.urandom(2)
+    # One question: "node status" for the wildcard name "*".
+    packet = query_id + b"\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x20CK" + b"A" * 30 + b"\x00\x00\x21\x00\x01"
+    return parse_netbios_names(_ask(ip, port, packet, timeout))
+
+
+def _read_name(data, offset, depth=0):
+    labels = []
+    while depth < 8:
+        length = data[offset]
+        if length == 0:
+            break
+        if length & 0xC0 == 0xC0:
+            pointer = ((length & 0x3F) << 8) | data[offset + 1]
+            labels.append(_read_name(data, pointer, depth + 1))
+            break
+        labels.append(data[offset + 1:offset + 1 + length].decode("utf-8", errors="ignore"))
+        offset += 1 + length
+    return ".".join(label for label in labels if label)
+
+
+def parse_mdns_pointer(data):
+    """The host name from an answer to a reverse (PTR) question, or ""."""
+    try:
+        if len(data) < 12 or not data[2] & 0x80:
+            return ""
+        questions, answers = int.from_bytes(data[4:6], "big"), int.from_bytes(data[6:8], "big")
+        offset = 12
+        for _ in range(questions):
+            offset = _skip_name(data, offset) + 4
+        for _ in range(answers):
+            offset = _skip_name(data, offset)
+            record_type = int.from_bytes(data[offset:offset + 2], "big")
+            length = int.from_bytes(data[offset + 8:offset + 10], "big")
+            offset += 10
+            if record_type == 12:  # PTR
+                return clean_name(_read_name(data, offset))
+            offset += length
+    except IndexError:
+        pass
+    return ""
+
+
+def mdns_name(ip, port=5353, timeout=NAME_TIMEOUT):
+    query_id = os.urandom(2)
+    question = b"".join(bytes([len(part)]) + part.encode() for part in reversed(ip.split("."))) + b"\x07in-addr\x04arpa\x00"
+    # Type PTR; class IN with the "answer me directly" bit, so the reply comes to us and
+    # not to the multicast group.
+    packet = query_id + b"\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00" + question + b"\x00\x0c\x80\x01"
+    return parse_mdns_pointer(_ask(ip, port, packet, timeout))
+
+
+def lookup_hostname(ip, sources=None):
+    for source in sources or (reverse_dns, netbios_name, mdns_name):
+        name = source(ip)
+        if name:
+            return name
+    return ""
+
+
+def own_mac(ip):
+    """The MAC address of this server's own network card with that address, or "". The
+    neighbour table lists other machines only, so the server would show up without one."""
+    try:
+        result = subprocess.run(["ip", "-o", "-4", "addr", "show"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=10)
+        for line in result.stdout.decode(errors="replace").splitlines():
+            fields = line.split()
+            if len(fields) >= 4 and fields[2] == "inet" and fields[3].split("/")[0] == ip:
+                name = fields[1].split("@")[0]
+                with open(f"/sys/class/net/{name}/address", encoding="ascii") as handle:
+                    return normalize_mac(handle.read())
+    except (subprocess.TimeoutExpired, OSError, ValueError):
+        pass
+    return ""
+
+
+def scan_network(network, alive=None, hostname=lookup_hostname, neighbors=read_neighbors, use_tcp=True,
+                 own_address=server_address, own_mac_lookup=own_mac):
     alive = alive or (host_alive if use_tcp else ping_host)
     addresses = [str(ip) for ip in network.hosts()]
     with ThreadPoolExecutor(max_workers=WORKERS) as pool:
         up = [ip for ip, ok in zip(addresses, pool.map(alive, addresses)) if ok]
         names = dict(zip(up, pool.map(hostname, up)))
     macs = neighbors() if up else {}
+    me = own_address() if up else ""
+    if me in up and not macs.get(me):
+        macs[me] = own_mac_lookup(me)
     return [{"ip_address": ip, "hostname": names.get(ip, ""), "mac_address": macs.get(ip, "")} for ip in up]
 
 

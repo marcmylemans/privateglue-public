@@ -6,6 +6,19 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+## v0.8.0 (2026-11-24)
+
+### Added
+- Versions now follow one scheme, `vBIG.SMALL.FIX` (for example `v0.8.0`), so every release
+  also gets its own Docker image tag. The four-part versions `v0.7.0.1` to `v0.7.0.3` were
+  the last of their kind.
+- **More names in a scan from the server.** Besides DNS, the scan now asks each device for
+  its NetBIOS name (Windows, NAS, Samba) and its mDNS name (Apple, Linux, printers). Devices
+  that showed as a bare IP address now often show with their name.
+- The server itself now shows with its MAC address in the scan result.
+
+## v0.7.0.3 (2026-11-24)
+
 ### Changed
 - **Scanning from the server is now a switch in the app.** An administrator turns it on under
   Devices > Discovered, without editing `.env` or restarting. It is still off by default.
@@ -15,6 +28,8 @@ All notable changes to **PrivateGlue** will be documented in this file.
 ### Changed
 - The user guide is now also published at https://privateglue.app/docs, with search. It is
   built from the same pages as the wiki and follows every release.
+
+## v0.7.0.2 (2026-11-14)
 
 ### Fixed
 - **Restoring a backup now takes effect by itself.** The app reloads after a restore, so the
@@ -26,6 +41,8 @@ All notable changes to **PrivateGlue** will be documented in this file.
 - The unused `/admin/restore` address. It could replace the database of a running install
   with a backup file from the backups folder. Restoring is only offered on the setup screen
   of a new install.
+
+## v0.7.0.1 (2026-11-14)
 
 ### Added
 - **Install on Proxmox VE without Docker.** One command in the Proxmox shell creates an LXC

@@ -37,6 +37,20 @@ Limits: private networks only (`10.x.x.x`, `172.16` to `172.31.x.x`, `192.168.x.
 
 **Also find devices that do not answer ping** is ticked by default. Windows machines often ignore ping, so PrivateGlue also tries a few common ports (web, SSH, file sharing, remote desktop). Untick it if the list fills up with devices that do not exist, which can happen behind some firewalls.
 
+### Where the names come from
+
+For every device that answers, the server tries three sources and takes the first that gives a name:
+
+| Source | Finds | Needs |
+|---|---|---|
+| DNS | The name your DNS server has for the address | A reverse (PTR) record. Many routers and DHCP servers create these by themselves; otherwise add them on your DNS server. |
+| NetBIOS | Windows computers, NAS boxes, anything running Samba | The device answers on UDP port 137. Windows does when file sharing is allowed through its firewall. |
+| mDNS | Apple devices, most Linux machines, printers, smart-home gear (`name.local`) | The device answers on UDP port 5353. Usually only for a server in the same network segment. |
+
+A device that offers none of these shows with its IP address as its name. That is common for plain Linux servers and containers without a DNS record. You can rename a device after importing it.
+
+If most of your devices show as an address: check that the server uses your own DNS server (not a public one), and that this DNS server has reverse records for the network.
+
 ### MAC addresses need the host network
 
 With the normal compose file, the container sits on Docker's own network. It can reach your network and finds devices and their names, but it cannot see MAC addresses. To get those, run PrivateGlue on the host network with the second compose file:

@@ -34,7 +34,9 @@ there, which blocks the old key at once. Let the probe talk to the server over H
 
 "Scan from this server" (Devices > Discovered) is off by default. An administrator turns it
 on and off in the app; the change is written to the log with the account that made it. When
-on, administrators can make the server ping and connect to addresses in private ranges. Only
+on, administrators can make the server ping and connect to addresses in private ranges, and
+ask the devices that answer for their name (DNS, NetBIOS on UDP 137, mDNS on UDP 5353). Names
+reported by devices are checked before they are shown or stored. Only
 turn it on where every administrator may look around the network the server is in.
 
 On a hosted or shared server, set `ALLOW_SERVER_SCAN=never`. That keeps it off and removes
