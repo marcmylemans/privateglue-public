@@ -6,6 +6,14 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+## v0.8.1 (2026-11-25)
+
+### Added
+- **UniFi: sign in with username and password.** The self-hosted UniFi Network Server cannot
+  create API keys, so the integration could not be used with it. Choose "Username and password"
+  under "Sign in with" and use a local, view-only account. Signing in with an API key keeps
+  working as before.
+
 ## v0.8.0 (2026-11-24)
 
 ### Added
