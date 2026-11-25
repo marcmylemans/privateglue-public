@@ -34,7 +34,8 @@ Create an account for PrivateGlue only. Do not use your own.
    local access only", or leave "Remote access" off. An account that signs in through UI.com
    asks for a two-factor code and cannot be used.
 3. Give it the **View Only** role for Network. PrivateGlue only reads.
-4. In PrivateGlue, set **Sign in with** to "Username and password" and fill in both.
+4. In PrivateGlue, set **Sign in with** to "Username and password" and fill in both. The page
+   then shows the username and password fields in place of the API key field.
 
 PrivateGlue signs in at the start of each sync, reads, and signs out again. The password is
 stored encrypted and never shown again after saving. Because the account is view-only, this is

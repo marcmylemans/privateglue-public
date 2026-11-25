@@ -11,6 +11,7 @@ class Field:
     """One setting on the integration's settings page.
 
     kind: text, url, password, number, checkbox, select or textarea.
+    show_if: (other field, value) to show this field only for that choice of a select.
     secret: stored encrypted and never sent back to the browser. Use it for tokens and
             passwords. kind="password" implies secret.
     """
@@ -23,6 +24,9 @@ class Field:
     help: str = ""
     placeholder: str = ""
     choices: list = dc_field(default_factory=list)  # for select: [(value, label), ...]
+    # Only show this field while another field has a certain value: ("auth", "login").
+    # Purely for the page: a hidden field is still saved and still validated.
+    show_if: tuple = ()
 
     def __post_init__(self):
         if self.kind == "password":

@@ -6,6 +6,13 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+## v0.8.2 (2026-11-25)
+
+### Fixed
+- **UniFi: a filled-in username and password are now used.** In v0.8.1 they were ignored while
+  "Sign in with" still said "API key", and the test answered "Fill in the API key". The settings
+  page now also shows only the fields of the way you chose.
+
 ## v0.8.1 (2026-11-25)
 
 ### Added

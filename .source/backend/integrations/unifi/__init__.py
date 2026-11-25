@@ -183,13 +183,12 @@ class UniFiNetwork(Integration):
               choices=[(AUTH_API_KEY, "API key (UniFi OS: Cloud Gateway, UDM, Cloud Key, UniFi OS Server)"),
                        (AUTH_LOGIN, "Username and password (works everywhere, needed for a self-hosted Network Server)")],
               help="A self-hosted UniFi Network Server cannot create API keys: choose username and password there."),
-        Field("api_key", "API key", kind="password",
-              help="Only for sign-in with an API key. Create it in UniFi Network under "
-                   "Settings > Control Plane > Integrations."),
-        Field("username", "Username", kind="text", default="",
-              help="Only for sign-in with username and password. A local account, view-only is enough."),
-        Field("password", "Password", kind="password",
-              help="Only for sign-in with username and password."),
+        Field("api_key", "API key", kind="password", show_if=("auth", AUTH_API_KEY),
+              help="Create it in UniFi Network under Settings > Control Plane > Integrations."),
+        Field("username", "Username", kind="text", default="", show_if=("auth", AUTH_LOGIN),
+              help="A local account made for PrivateGlue. View-only is enough."),
+        Field("password", "Password", kind="password", show_if=("auth", AUTH_LOGIN),
+              help="Not your UI.com password: that account asks for a two-factor code."),
         Field("verify_tls", "Verify the TLS certificate", kind="checkbox", default=True,
               help="UniFi consoles ship with a self-signed certificate. Turn this off unless you "
                    "installed a trusted certificate on the console."),
@@ -292,7 +291,14 @@ class UniFiNetwork(Integration):
     # --- sign-in method ---------------------------------------------------
     @staticmethod
     def _uses_login(config):
-        return _text(config.get("auth")) == AUTH_LOGIN
+        """The chosen way of signing in. When what it needs is missing and the other way is
+        filled in completely, that one is used: somebody who typed a username and password and
+        left the choice on "API key" plainly means to sign in with those."""
+        has_key = bool(config.get("api_key"))
+        has_login = bool(_text(config.get("username")) and config.get("password"))
+        if _text(config.get("auth")) == AUTH_LOGIN:
+            return has_login or not has_key
+        return has_login and not has_key
 
     def _check_credentials(self, config):
         """Say which field is missing for the chosen way of signing in."""

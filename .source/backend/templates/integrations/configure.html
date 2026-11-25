@@ -35,7 +35,7 @@
   <div class="form-section">
     {% for field in integration.fields %}
     {% set value = settings.get(field.name, field.default) %}
-    <div class="mb-3">
+    <div class="mb-3"{% if field.show_if %} data-show-if-field="{{ field.show_if[0] }}" data-show-if-value="{{ field.show_if[1] }}"{% endif %}>
       {% if field.kind == 'checkbox' %}
         <div class="form-check">
           <input class="form-check-input" type="checkbox" name="{{ field.name }}" id="f-{{ field.name }}" {% if value %}checked{% endif %}>

@@ -418,6 +418,16 @@
       btn.addEventListener('click', function () { window.history.back(); });
     });
 
+    // Integration settings: show only the fields that belong to the chosen option, for
+    // example the API key or the username and password. Without JavaScript all fields show.
+    $all('[data-show-if-field]').forEach(function (block) {
+      var chooser = document.getElementById('f-' + block.getAttribute('data-show-if-field'));
+      if (!chooser) return;
+      var update = function () { block.hidden = chooser.value !== block.getAttribute('data-show-if-value'); };
+      chooser.addEventListener('change', update);
+      update();
+    });
+
     // Keyboard: "/" or Ctrl/Cmd+K focuses global search
     var search = $('#globalSearch');
     document.addEventListener('keydown', function (e) {
