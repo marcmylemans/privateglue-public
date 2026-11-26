@@ -5,7 +5,9 @@ from backend.models.users import User
 from backend.models.devices import Device
 from backend.models.credentials import Credential
 from backend.extensions import db
-from backend.utils.backup import extract_backup_zip
+from backend.utils.backup import extract_backup_zip, write_backup_zip
+from backend.utils import audit
+from backend import features
 import os, sys
 import zipfile
 import socket
@@ -34,28 +36,13 @@ def get_app_version():
 @login_required
 @admin_required
 def create_backup():
-    db_path = paths.DB_PATH
-    secret_path = paths.secret_key_path()
-    notes_dir = paths.NOTES_DIR
     backup_dir = paths.BACKUP_DIR
-
     os.makedirs(backup_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
     zip_filename = f"backup-{timestamp}.zip"
-    zip_path = os.path.join(backup_dir, zip_filename)
-
-    with zipfile.ZipFile(zip_path, "w") as zipf:
-        if os.path.exists(db_path):
-            zipf.write(db_path, arcname="app.db")
-        if os.path.exists(secret_path):
-            zipf.write(secret_path, arcname="secret.key")
-        if os.path.isdir(notes_dir):
-            for filename in os.listdir(notes_dir):
-                filepath = os.path.join(notes_dir, filename)
-                if os.path.isfile(filepath) and (filename.endswith(".md") or (filename.endswith(".meta.json"))):
-                    arcname = os.path.join("notes", filename)
-                    zipf.write(filepath, arcname=arcname)
+    write_backup_zip(os.path.join(backup_dir, zip_filename))
+    audit.record("backup.created", detail=zip_filename)
 
     flash(f"Backup {zip_filename} created. Download it from the list below.", "success")
     return redirect(url_for("admin.about_page") + "#backups")
@@ -66,6 +53,7 @@ def create_backup():
 @admin_required
 def download_backup(filename):
     backup_dir = paths.BACKUP_DIR
+    audit.record("backup.downloaded", detail=filename)
     return send_from_directory(backup_dir, filename, as_attachment=True)    
 
 @admin_bp.route("/admin/users")
@@ -83,12 +71,14 @@ def edit_user(user_id):
 
     if request.method == "POST":
         # Update role
+        role_changed = False
         new_role = request.form.get("role")
         if new_role in ["admin", "editor", "readonly"]:
             if user.role == "admin" and new_role != "admin" and User.query.filter_by(role="admin").count() <= 1:
                 flash("This is the only admin account. Make someone else an admin first.", "danger")
                 return redirect(url_for("admin.edit_user", user_id=user.id))
             if new_role != user.role:
+                role_changed = True
                 user.role = new_role
                 # A role change takes effect at once: the user has to sign in again.
                 if user.id != current_user.id:
@@ -109,6 +99,9 @@ def edit_user(user_id):
         user.force_password_reset = bool(request.form.get("force_password_reset"))
 
         db.session.commit()
+        audit.record("user.updated", "user", user.id, user.username,
+                     detail=("Role is now " + user.role + ". " if role_changed else "")
+                     + ("Password was set by an administrator." if new_password else "") or None)
         flash(f"User '{user.username}' updated.", "success")
         return redirect(url_for("admin.list_users"))
 
@@ -126,8 +119,10 @@ def delete_user(user_id):
         flash("You cannot delete your own account.", "danger")
         return redirect(url_for("admin.list_users"))
 
+    features.emit("user_deleted", user)
     db.session.delete(user)
     db.session.commit()
+    audit.record("user.deleted", "user", user_id, user.username)
     flash(f"User '{user.username}' has been deleted.", "success")
     return redirect(url_for("admin.list_users"))
 
@@ -151,6 +146,7 @@ def reset_user_password(user_id):
             user.set_password(new_password)
             user.force_password_reset = True
             db.session.commit()
+            audit.record("user.password_reset", "user", user.id, user.username)
             flash(f"Password for '{user.username}' has been reset.", "success")
             return redirect(url_for("admin.list_users"))
 
@@ -182,6 +178,7 @@ def create_user():
             user.force_password_reset = True  # User must reset password on first login
             db.session.add(user)
             db.session.commit()
+            audit.record("user.created", "user", user.id, user.username, detail="Role " + role + ".")
             flash(f"User '{username}' created successfully.", "success")
             return redirect(url_for("admin.list_users"))
 

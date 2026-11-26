@@ -1,0 +1,6 @@
+/* Extra fields on a credential. */
+.pgf-row + .pgf-row { border-top: 1px solid var(--pg-border); margin-top: .75rem; padding-top: .75rem; }
+.pgf-row.pgf-removed .form-control,
+.pgf-row.pgf-removed .form-select { text-decoration: line-through; opacity: .6; }
+textarea.pgf-value { white-space: pre; overflow-x: auto; }
+.pgf-reveal { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; resize: vertical; }

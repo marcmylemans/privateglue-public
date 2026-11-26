@@ -1,0 +1,22 @@
+{% set tf_policy = feat.two_factor.policy() %}
+<section class="panel mb-3" aria-labelledby="tfPolicyTitle">
+  <div class="panel-header"><h2 class="panel-title" id="tfPolicyTitle"><i class="bi bi-shield-lock" aria-hidden="true"></i> Two-factor sign-in</h2></div>
+  <form method="POST" action="{{ url_for('two_factor.save_policy') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <fieldset class="panel-body" {% if DEMO_MODE %}disabled{% endif %}>
+      <legend class="form-label fs-6">Who must use it</legend>
+      <div class="row g-2">
+        {% for value, label, desc in feat.two_factor.policy_choices() %}
+        <div class="col-md-4">
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="policy" id="tfPolicy-{{ value }}" value="{{ value }}" {% if tf_policy == value %}checked{% endif %} required>
+            <label class="form-check-label" for="tfPolicy-{{ value }}">{{ label }} <span class="d-block small text-body-secondary">{{ desc }}</span></label>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-text mt-2">{% if DEMO_MODE %}This setting cannot be changed in demo mode.{% else %}People it applies to are asked to set it up on their next page. It never stops anyone from signing in.{% endif %}</div>
+    </fieldset>
+    {% if not DEMO_MODE %}<div class="form-actions"><button type="submit" class="btn btn-primary">Save</button></div>{% endif %}
+  </form>
+</section>

@@ -1,0 +1,24 @@
+{% set pwage_due = feat.password_age.due_credentials() %}
+{% if pwage_due %}
+<div class="col-lg-6">
+  <section class="panel h-100" aria-labelledby="pwageRenewTitle">
+    <div class="panel-header">
+      <h2 class="panel-title" id="pwageRenewTitle"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Passwords to renew <span class="count-pill">{{ pwage_due|length }}</span></h2>
+    </div>
+    <ul class="item-list">
+      {% for cred, due_ago in pwage_due[:5] %}
+      <li>
+        <span class="item-icon"><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+        <a class="item-main item-link" href="{{ url_for('credentials.view_credential', id=cred.id) }}">
+          <span class="item-title">{{ cred.title }}</span>
+          <span class="item-meta">Due {{ due_ago }}{% if cred.username %} · {{ cred.username }}{% endif %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if pwage_due|length > 5 %}
+    <div class="panel-footer small"><a href="{{ url_for('credentials.list_credentials', due=1) }}">and {{ pwage_due|length - 5 }} more</a></div>
+    {% endif %}
+  </section>
+</div>
+{% endif %}

@@ -19,6 +19,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+  {% for path in feature_assets('css') %}<link rel="stylesheet" href="{{ url_for('static', filename=path) }}">
+  {% endfor %}
   {% block head %}{% endblock %}
 </head>
 {% set nav = active_nav | default(request.endpoint.split('.')[0] if request.endpoint else '') %}
@@ -79,6 +81,7 @@
         <a class="nav-link{% if request.endpoint == 'admin.about_page' %} active{% endif %}" href="{{ url_for('admin.about_page') }}">
           <i class="bi bi-hdd-stack" aria-hidden="true"></i><span>System &amp; backups</span>
         </a>
+        {% for tpl in feature_templates('nav_admin') %}{% include tpl %}{% endfor %}
         {% endif %}
       </nav>
 
@@ -192,6 +195,8 @@
 
   <script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/privateglue.js') }}"></script>
+  {% for path in feature_assets('js') %}<script src="{{ url_for('static', filename=path) }}"></script>
+  {% endfor %}
   {% block scripts %}{% endblock %}
 </body>
 </html>

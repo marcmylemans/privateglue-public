@@ -1,0 +1,50 @@
+{# Dates to watch on the device form. Rows post as repeated fields: dates_kind, dates_label, dates_on, dates_note. #}
+{% set dates_feat = feat.dates %}
+{% set dates_rows = dates_feat.form_rows(device, clone | default(false)) %}
+{% macro dates_row(n, row) -%}
+<div class="dates-row" data-dates-row>
+  <div class="row g-2 align-items-center">
+    <div class="col-sm-4">
+      <select class="form-select" name="dates_kind" id="dates_kind_{{ n }}" aria-label="Kind">
+        {% for k, label, icon in dates_feat.kinds %}
+          <option value="{{ k }}" {% if row and row.kind == k %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-4">
+      <input type="text" class="form-control" name="dates_label" id="dates_label_{{ n }}" maxlength="{{ dates_feat.label_max }}"
+             value="{{ row.label if row else '' }}" placeholder="e.g. wildcard cert" aria-label="Label (optional)" autocomplete="off">
+    </div>
+    <div class="col-9 col-sm-3">
+      <input type="date" class="form-control" name="dates_on" id="dates_on_{{ n }}" min="1900-01-01" max="2199-12-31"
+             value="{{ row.on if row else '' }}" aria-label="Date">
+    </div>
+    <div class="col-3 col-sm-1 text-end">
+      <button type="button" class="btn btn-ghost btn-icon" data-dates-remove hidden aria-label="Remove this date" title="Remove">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="col-sm-11">
+      <input type="text" class="form-control" name="dates_note" id="dates_note_{{ n }}" maxlength="{{ dates_feat.note_max }}"
+             value="{{ row.note if row else '' }}" placeholder="Note, e.g. contract number" aria-label="Note (optional)" autocomplete="off">
+    </div>
+  </div>
+</div>
+{%- endmacro %}
+<div class="form-section" id="datesSection">
+  <h2 class="form-section-title"><i class="bi bi-calendar-event" aria-hidden="true"></i> Dates to watch</h2>
+  <p class="form-section-desc">Warranty, support, licence and certificate end dates. Within {{ dates_feat.warn_days }} days they show on the dashboard.</p>
+  <input type="hidden" name="dates_present" value="1">
+  <div class="dates-head d-none d-sm-flex row g-2" aria-hidden="true">
+    <div class="col-sm-4 form-label">Kind</div>
+    <div class="col-sm-4 form-label">Label <span class="optional">optional</span></div>
+    <div class="col-sm-3 form-label">Ends on</div>
+  </div>
+  <div data-dates-rows data-dates-max="{{ dates_feat.max_per_device }}">
+    {% for row in dates_rows %}{{ dates_row(loop.index, row) }}{% endfor %}
+    {% if dates_rows | length < dates_feat.max_per_device %}{{ dates_row(dates_rows | length + 1, None) }}{% endif %}
+  </div>
+  <template id="datesRowTemplate">{{ dates_row('__N__', None) }}</template>
+  <div class="form-text mt-2" id="datesHelp">Rows without a date are not saved. Up to {{ dates_feat.max_per_device }} per device.</div>
+  <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-dates-add hidden><i class="bi bi-plus-lg" aria-hidden="true"></i> Add a date</button>
+</div>

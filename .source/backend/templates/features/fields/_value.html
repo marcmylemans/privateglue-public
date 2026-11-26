@@ -1,0 +1,24 @@
+{# The value input of one extra field in the credential form.
+   tok: row token; kind: secret, multiline or text; value: only ever filled for text;
+   keep: the field exists and its hidden value is not in the page, so empty keeps it. #}
+{% macro value_input(tok, kind, value='', keep=False) -%}
+{% set vid = 'fieldsValue-' ~ tok %}
+<label class="visually-hidden" for="{{ vid }}">Value</label>
+{% if kind == 'multiline' %}
+<textarea class="form-control mono pgf-value" id="{{ vid }}" name="fields_value_{{ tok }}" rows="{{ 2 if keep else 4 }}" maxlength="16000"
+          autocomplete="off" spellcheck="false" data-fields-value
+          {% if keep %}placeholder="••••••••  (unchanged)" aria-describedby="{{ vid }}-keep"{% else %}placeholder="Paste the key or the codes, one per line"{% endif %}></textarea>
+{% elif kind == 'text' %}
+<input type="text" class="form-control mono pgf-value" id="{{ vid }}" name="fields_value_{{ tok }}" maxlength="16000"
+       autocomplete="off" spellcheck="false" data-fields-value value="{{ value }}"
+       {% if keep %}placeholder="(unchanged)" aria-describedby="{{ vid }}-keep"{% else %}placeholder="Value"{% endif %}>
+{% else %}
+<div class="input-group">
+  <input type="password" class="form-control mono pgf-value" id="{{ vid }}" name="fields_value_{{ tok }}" maxlength="16000"
+         autocomplete="new-password" spellcheck="false" data-fields-value
+         {% if keep %}placeholder="••••••••  (unchanged)" aria-describedby="{{ vid }}-keep"{% else %}placeholder="Value"{% endif %}>
+  <button type="button" class="btn btn-outline-secondary" data-fields-toggle="#{{ vid }}" aria-label="Show value" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+</div>
+{% endif %}
+{% if keep %}<div class="form-text" id="{{ vid }}-keep">Leave empty to keep the current value.</div>{% endif %}
+{%- endmacro %}

@@ -1,6 +1,8 @@
 import os
 import io, csv
 import ipaddress
+from backend.utils import audit
+from backend import features
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, Response, jsonify, abort, current_app
 from datetime import datetime
 from flask_login import login_required, current_user
@@ -115,8 +117,16 @@ def add_device():
         if not device.hostname:
             flash("Hostname is required.", "danger")
             return render_template("devices/form.html", **_device_form_context(device=device, is_new=True))
+        problems = features.problems("device_validate", request.form, None)
+        if problems:
+            for problem in problems:
+                flash(problem, "danger")
+            return render_template("devices/form.html", **_device_form_context(device=device, is_new=True))
         db.session.add(device)
+        db.session.flush()  # gives the device its id, so features can store what belongs to it
+        features.emit("device_saved", device, request.form, created=True)
         db.session.commit()
+        audit.record("device.created", "device", device.id, device.hostname)
         flash(f"Device '{device.hostname}' added.", "success")
         return redirect(url_for("devices.view_device", id=device.id))
 
@@ -135,7 +145,15 @@ def edit_device(id):
             db.session.rollback()
             flash("Hostname is required.", "danger")
             return redirect(url_for("devices.edit_device", id=id))
+        problems = features.problems("device_validate", request.form, device)
+        if problems:
+            db.session.rollback()
+            for problem in problems:
+                flash(problem, "danger")
+            return redirect(url_for("devices.edit_device", id=id))
+        features.emit("device_saved", device, request.form, created=False)
         db.session.commit()
+        audit.record("device.updated", "device", device.id, device.hostname)
         flash(f"Device '{device.hostname}' saved.", "success")
         return redirect(url_for("devices.view_device", id=device.id))
 
@@ -169,8 +187,10 @@ def delete_device(id):
     device = Device.query.get_or_404(id)
     hostname = device.hostname
     device.credentials = []
+    features.emit("device_deleted", device)
     db.session.delete(device)
     db.session.commit()
+    audit.record("device.deleted", "device", id, hostname)
     flash(f"Device '{hostname}' deleted.", "success")
     return redirect(url_for("devices.list_devices"))
 
@@ -187,10 +207,14 @@ def delete_selected_devices():
         except ValueError:
             continue
     devices = Device.query.filter(Device.id.in_(ids)).all() if ids else []
+    deleted = [(device.id, device.hostname) for device in devices]
     for device in devices:
         device.credentials = []
+        features.emit("device_deleted", device)
         db.session.delete(device)
     db.session.commit()
+    for device_id, hostname in deleted:
+        audit.record("device.deleted", "device", device_id, hostname)
     if devices:
         flash(f"{len(devices)} device{'s' if len(devices) != 1 else ''} deleted.", "success")
     else:
@@ -205,6 +229,7 @@ def view_device(id):
     device = Device.query.get_or_404(id)
     linked_notes = get_notes_linked_to_device(device.id)
     credentials = device.credentials
+    features.emit("device_viewed", device)
 
     return render_template(
         "devices/view.html",
@@ -578,6 +603,8 @@ def set_server_scan():
     turn_on = request.form.get('enabled') == 'on'
     try:
         netscan.set_enabled(turn_on, by=current_user.username)
+        audit.record("settings.server_scan_changed",
+                     detail="Scanning from this server was turned " + ("on." if turn_on else "off."))
         print(f"[INFO] Scan from this server turned {'on' if turn_on else 'off'} by {current_user.username}")
         flash('Scanning from this server is now on.' if turn_on else 'Scanning from this server is now off.',
               'success' if turn_on else 'info')
@@ -607,5 +634,6 @@ def scan_from_server():
 @admin_required
 def rotate_probe_key():
     probe_store.rotate_api_key()
+    audit.record("settings.probe_key_replaced")
     flash('New probe key created. Update the key on every machine that runs the probe.', 'success')
     return redirect(url_for('devices.show_discovered_devices'))

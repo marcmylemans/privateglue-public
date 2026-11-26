@@ -308,7 +308,9 @@ mark { background: rgba(245, 158, 11, .3); color: inherit; padding: 0 .1em; bord
 
 /* ---------- Tables ---------- */
 .table-panel { background: var(--pg-surface); border: 1px solid var(--pg-border); border-radius: var(--pg-radius); box-shadow: var(--pg-shadow); overflow: hidden; }
-.table-panel .table-responsive { margin: 0; }
+/* position: relative keeps visually hidden text (the "Actions" header) inside the scrolling
+   box, so a wide table can never make the whole page wider on a phone. */
+.table-panel .table-responsive { margin: 0; position: relative; }
 .pg-table { --bs-table-bg: transparent; --bs-table-hover-bg: var(--pg-muted-bg); --bs-table-border-color: var(--pg-border); margin: 0; }
 .pg-table > thead th {
   font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--bs-secondary-color);
@@ -318,6 +320,11 @@ mark { background: rgba(245, 158, 11, .3); color: inherit; padding: 0 .1em; bord
 .pg-table > tbody tr:last-child td { border-bottom: 0; }
 .pg-table tr[data-href] { cursor: pointer; }
 .pg-table .row-title { font-weight: 600; color: var(--bs-body-color); text-decoration: none; }
+/* A title with badges and tags after it: they stay on the title's line while there is room
+   and move under it when there is not, so the title itself never gets squeezed. */
+.pg-table .row-title-group { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; min-width: 12rem; }
+/* One piece in the "needs attention" row of the dashboard takes the full width. */
+.dashboard-alerts > [class*="col-"]:only-child { flex: 0 0 100%; max-width: 100%; }
 .pg-table tr[data-href]:hover .row-title { color: var(--pg-brand); }
 .pg-table .actions { text-align: right; white-space: nowrap; width: 1%; }
 .pg-table .filter-empty td { text-align: center; color: var(--bs-secondary-color); padding: 2rem 1rem; }

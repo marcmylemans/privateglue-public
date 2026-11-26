@@ -19,11 +19,13 @@ PrivateGlue is a self-hosted web app for documenting your IT environment: device
 | Topic | Page |
 |---|---|
 | Accounts and what each role can do | [Users and roles](Users-and-roles) |
+| A code from your phone at sign-in | [Two-factor sign-in](Two-factor-sign-in) |
 | Adding and managing devices | [Devices](Devices) |
 | Finding devices on your network | [Network scan](Network-scan) |
 | Pulling devices from NetBox, Proxmox, UniFi or Intune, and syncing notes with GitHub | [Integrations](Integrations) |
 | Writing documentation | [Notes](Notes) |
-| Storing passwords | [Credentials](Credentials) |
+| Storing passwords, one-time codes, keys and tokens | [Credentials](Credentials) |
+| Seeing who opened or changed what | [Activity](Activity-log) |
 | What to think about before exposing it to the internet | [Security](Security) |
 
 ## Good to know

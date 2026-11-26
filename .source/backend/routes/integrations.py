@@ -10,6 +10,7 @@ from backend.extensions import db
 from backend.integrations import runner
 from backend.integrations.base import IntegrationError
 from backend.integrations.models import IntegrationConfig, IntegrationRun
+from backend.utils import audit
 from backend.utils.rbac import admin_required
 
 integrations_bp = Blueprint("integrations", __name__)
@@ -148,6 +149,8 @@ def configure(key):
         for problem in problems:
             flash(problem, "danger")
         if not problems:
+            audit.record("integration.settings_saved", "integration", key, integration.name,
+                         detail="Turned on." if row.enabled else "Turned off.")
             flash(f"{integration.name} settings saved.", "success")
         return redirect(url_for("integrations.configure", key=key))
 
@@ -216,5 +219,6 @@ def sync_now(key):
         flash("A sync is already running.", "info")
     else:
         runner.run_sync_in_background(current_app._get_current_object(), key, "manual")
+        audit.record("integration.sync_started", "integration", key, integration.name)
         flash("Sync started. Reload this page in a moment to see the result.", "info")
     return redirect(url_for("integrations.configure", key=key))

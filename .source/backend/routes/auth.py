@@ -11,8 +11,25 @@ from werkzeug.utils import secure_filename
 from sqlalchemy.exc import IntegrityError
 import os, sys, threading, time
 from backend.utils import paths
+from backend.utils import audit
+from backend import features
+from backend.features.two_factor import service as two_factor
 
 auth_bp = Blueprint("auth", __name__)
+
+
+def finish_sign_in(user, remember, next_url):
+    """Sign the user in and send them on. Called after the password, or after the
+    two-factor code for users who have that on."""
+    session.permanent = remember  # True = persistent; False = expires on browser close or app stop
+    login_user(user, remember=remember)
+    audit.record("auth.signed_in", "user", user.id, user.username)
+    if user.force_password_reset:
+        flash("You must change your password before continuing.", "warning")
+        return redirect(url_for('auth.force_change_password'))
+    if is_safe_redirect_target(next_url):
+        return redirect(next_url)
+    return redirect(url_for('index'))
 
 
 def _login_username_key():
@@ -42,17 +59,14 @@ def login():
         user = User.query.filter_by(username=form.username.data).first()
         if user and user.check_password(form.password.data):
             remember = form.remember.data
-            session.permanent = remember  # True = persistent; False = expires on browser close or app stop
-            login_user(user, remember=remember)
-            if user.force_password_reset:
-                flash("You must change your password before continuing.", "warning")
-                return redirect(url_for('auth.force_change_password'))
-            else:
-                next_url = request.args.get("next", "")
-                if is_safe_redirect_target(next_url):
-                    return redirect(next_url)
-                return redirect(url_for('index'))
+            next_url = request.args.get("next", "")
+            # With two-factor sign-in on, the password alone signs nobody in: ask for the code.
+            if two_factor.begin_sign_in(user, remember, next_url):
+                return redirect(url_for("two_factor.verify"))
+            return finish_sign_in(user, remember, next_url)
         else:
+            audit.record("auth.sign_in_failed", "user", user.id if user else None,
+                         (form.username.data or "")[:80], username=(form.username.data or "")[:80])
             flash("Invalid username or password", "danger")
 
     return render_template("auth/login.html", form=form)
@@ -103,6 +117,7 @@ def register():
 @auth_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    audit.record("auth.signed_out", "user", current_user.id, current_user.username)
     logout_user()
     session.clear()
     return redirect(url_for("auth.login"))
@@ -122,6 +137,7 @@ def check_username():
 def _restore_done():
     """After a restore the running workers still hold the old database and encryption key.
     Restart them, and show a page that says so and moves on to the sign-in by itself."""
+    audit.record("backup.restored", username="first-run set-up")
     return render_template("auth/restore_done.html", restarting=restart_app())
 
 
@@ -207,6 +223,7 @@ def change_password():
     user.set_password(new_password)  # also signs out every other session of this user
     db.session.commit()
     login_user(user, remember=session.permanent)
+    audit.record("auth.password_changed", "user", user.id, user.username)
     flash("Password updated. Other devices signed in with this account have been signed out.", "success")
     return redirect(url_for("auth.profile"))
 
@@ -220,8 +237,10 @@ def delete_account():
         flash("You are the only administrator. Make someone else an admin before deleting your account.", "danger")
         return redirect(url_for("auth.profile"))
     user = current_user._get_current_object()
+    audit.record("user.deleted", "user", user.id, user.username, detail="Deleted their own account.")
     logout_user()
     session.clear()
+    features.emit("user_deleted", user)
     db.session.delete(user)
     db.session.commit()
     flash("Your account has been deleted.", "info")
@@ -240,6 +259,7 @@ def force_change_password():
         current_user.set_password(form.new_password.data)
         current_user.force_password_reset = False
         db.session.commit()
+        audit.record("auth.password_changed", "user", current_user.id, current_user.username)
         flash("Password updated successfully. Please login again.", "success")
         logout_user()
         return redirect(url_for('auth.login'))

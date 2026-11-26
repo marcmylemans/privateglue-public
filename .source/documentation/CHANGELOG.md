@@ -6,6 +6,50 @@ All notable changes to **PrivateGlue** will be documented in this file.
 
 ## Unreleased
 
+## v0.9.0 (2026-11-26)
+
+### Fixed
+- The "Roadmap" link under System & backups pointed to a page that was no longer kept up to
+  date. It is replaced by links to the guide and to "What's new" on privateglue.app.
+
+### Added
+- **What's new** is now a page in the guide (privateglue.app/docs/changelog), with what each
+  version brought.
+- **Address on a credential.** Give a credential an address such as `https://10.0.10.11:8006`
+  and open it in a new tab or copy it. It shows in the credential list, and a device gets
+  "Open web interface" and "Copy SSH command" buttons.
+- **One-time codes.** A credential can store the secret behind a two-factor login and shows
+  the current six-digit code, ready to copy, so a shared login no longer depends on one
+  person's phone.
+- **Extra encrypted fields** on a credential, for an SSH private key, an API token or recovery
+  codes. Each one is hidden until you show it and can be copied without showing it.
+- **Password age and reminders.** A credential shows when its password was last changed. Ask
+  for a reminder after 90 days, 180 days or a year; due passwords show on the dashboard and in
+  the list. The previous five passwords are kept, encrypted, on the credential page.
+- **Tags on credentials**, like the ones on notes, with a tag filter on the list.
+- **Attachments.** Devices and notes can hold files such as a config export, a warranty PDF or
+  a rack photo: 20 files of up to 5 MB each, included in backups.
+- **Dates to watch.** Record warranty, support, licence and certificate end dates on a device.
+  "Running out soon" on the dashboard lists what has expired or ends within 60 days.
+- **Activity log** for administrators: who signed in, opened a credential, showed or copied a
+  password and changed what, with filters and a CSV export. Each credential shows its recent
+  activity. Passwords are never written to the log.
+- **Two-factor sign-in.** Turn it on in your profile: after your password you type a code from
+  an authenticator app, with ten recovery codes for when your phone is not at hand.
+  Administrators can require it for admins or for everyone, and reset it for someone who lost
+  their phone.
+
+### Changed
+- When a credential cannot be saved, the form comes back with what you typed. Before, it came
+  back empty.
+- Uploading a file that is too large now gives a clear message for attachments.
+
+### Good to know when updating
+- Nothing to do by hand. New tables are created at start-up, and attachments are stored inside
+  the existing data folder.
+- The Docker image and the Proxmox install pick up one new library by themselves (`segno`, for
+  the QR code of two-factor sign-in).
+
 ## v0.8.2 (2026-11-25)
 
 ### Fixed

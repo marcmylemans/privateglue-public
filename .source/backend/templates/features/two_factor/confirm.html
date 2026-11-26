@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% set active_nav = 'profile' %}
+{% set off = action == 'off' %}
+{% set heading = 'Turn off two-factor sign-in' if off else 'New recovery codes' %}
+{% block title %}{{ heading }} · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Profile', url_for('auth.profile')), (heading, None)]) }}{% endblock %}
+
+{% block content %}
+<div class="narrow-page">
+{{ ui.page_header(heading, icon=('shield-x' if off else 'key')) }}
+
+<form method="POST" action="{{ url_for('two_factor.turn_off' if off else 'two_factor.recovery_codes') }}" class="panel" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="panel-body">
+    <p class="text-body-secondary">
+      {% if off %}Your account is then protected by your password alone. Other devices signed in with this account are signed out.
+      {% else %}Your current recovery codes stop working and you get ten new ones. Other devices signed in with this account are signed out.{% endif %}
+    </p>
+    {% if error %}<div class="alert alert-danger d-flex gap-2" role="alert"><i class="bi bi-x-octagon" aria-hidden="true"></i><div>{{ error }}</div></div>{% endif %}
+    {% if off %}
+    <div class="mb-3">
+      <label class="form-label" for="tfPassword">Your password</label>
+      <div class="input-group">
+        <input type="password" name="password" id="tfPassword" class="form-control" required autocomplete="current-password" autofocus>
+        <button type="button" class="btn btn-outline-secondary" data-pw-toggle="#tfPassword" aria-label="Show password" aria-pressed="false"><i class="bi bi-eye" aria-hidden="true"></i></button>
+      </div>
+    </div>
+    {% endif %}
+    <div>
+      <label class="form-label" for="tfCode">Code from your authenticator app</label>
+      <input type="text" name="code" id="tfCode" class="form-control mono tf-code-input" placeholder="000000"
+             autocomplete="one-time-code" autocapitalize="none" spellcheck="false" maxlength="40" required {% if not off %}autofocus{% endif %}
+             aria-describedby="tfCodeHelp">
+      <div class="form-text" id="tfCodeHelp">Phone not at hand? A recovery code works too.</div>
+    </div>
+  </div>
+  <div class="form-actions">
+    {% if off %}
+    <button type="submit" class="btn btn-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> Turn off</button>
+    {% else %}
+    <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Make new codes</button>
+    {% endif %}
+    <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-secondary">Cancel</a>
+  </div>
+</form>
+</div>
+{% endblock %}

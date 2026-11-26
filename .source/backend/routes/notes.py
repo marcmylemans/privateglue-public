@@ -4,6 +4,9 @@ import markdown
 import re
 import bleach
 from flask import abort
+from backend.utils import audit
+from backend.extensions import db
+from backend import features
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_login import login_required
 from backend.models.devices import Device
@@ -235,6 +238,9 @@ def create_note():
             f.write(content)
 
         save_metadata(filename, tags, device_ids)
+        features.emit("note_saved", filename, request.form, created=True)
+        db.session.commit()
+        audit.record("note.created", "note", filename, filename[:-3])
         flash(f"Note '{filename[:-3]}' created.", "success")
         return redirect(url_for("notes.view_note", filename=filename))
 
@@ -265,6 +271,9 @@ def edit_note(filename):
             f.write(content)
 
         save_metadata(safe_filename, tags, device_ids)
+        features.emit("note_saved", safe_filename, request.form, created=False)
+        db.session.commit()
+        audit.record("note.updated", "note", safe_filename, safe_filename[:-3])
         flash("Note saved.", "success")
         return redirect(url_for("notes.view_note", filename=safe_filename))
 
@@ -291,5 +300,8 @@ def delete_note(filename):
         os.remove(filepath)
     if os.path.exists(meta_path):
         os.remove(meta_path)
+    features.emit("note_deleted", safe_filename)
+    db.session.commit()
+    audit.record("note.deleted", "note", safe_filename, safe_filename[:-3])
     flash(f"Note '{safe_filename[:-3]}' deleted.", "success")
     return redirect(url_for("notes.list_notes"))

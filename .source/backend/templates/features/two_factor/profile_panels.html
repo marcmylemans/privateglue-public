@@ -1,0 +1,28 @@
+{% set tf = feat.two_factor.status(user) %}
+<section class="panel" aria-labelledby="tfPanelTitle">
+  <div class="panel-header">
+    <h2 class="panel-title" id="tfPanelTitle"><i class="bi bi-shield-lock" aria-hidden="true"></i> Two-factor sign-in</h2>
+    {% if tf.on %}<span class="small"><span class="status-dot ok me-1" aria-hidden="true"></span>On</span>
+    {% else %}<span class="small text-body-secondary"><span class="status-dot me-1" aria-hidden="true"></span>Off</span>{% endif %}
+  </div>
+  {% if tf.on %}
+  <div class="panel-body">
+    <dl class="facts">
+      <div class="fact"><dt>On since</dt><dd>{{ tf.since.strftime('%d %b %Y') }}</dd></div>
+      <div class="fact"><dt>Recovery codes left</dt><dd>
+        {% if tf.codes_left <= 2 %}<span class="status-dot warn me-1" aria-hidden="true"></span>{% endif %}{{ tf.codes_left }} of 10
+      </dd></div>
+    </dl>
+    {% if tf.codes_left <= 2 %}<p class="small text-body-secondary mt-3 mb-0">You are running out of recovery codes. Make new ones.</p>{% endif %}
+  </div>
+  <div class="form-actions">
+    <a href="{{ url_for('two_factor.recovery_codes') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> New recovery codes</a>
+    <a href="{{ url_for('two_factor.turn_off') }}" class="btn btn-outline-danger"><i class="bi bi-shield-x" aria-hidden="true"></i> Turn off</a>
+  </div>
+  {% else %}
+  <div class="panel-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span class="small text-body-secondary">After your password, also ask for a code from an authenticator app on your phone. A stolen password alone is then not enough.{% if tf.required %} Your administrator requires it.{% endif %}</span>
+    <a href="{{ url_for('two_factor.setup') }}" class="btn btn-primary"><i class="bi bi-shield-check" aria-hidden="true"></i> Set up</a>
+  </div>
+  {% endif %}
+</section>

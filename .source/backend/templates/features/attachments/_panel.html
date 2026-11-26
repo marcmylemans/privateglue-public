@@ -1,0 +1,56 @@
+{# The Attachments panel, shared by the device page and the note page. Expects `att` from
+   feat.attachments.panel(owner_type, owner_key). Read-only users with no files see nothing. #}
+{% if att['items'] or att.can_upload %}
+<section class="panel" aria-labelledby="attachmentsTitle" id="attachments">
+  <div class="panel-header">
+    <h2 class="panel-title" id="attachmentsTitle"><i class="bi bi-paperclip" aria-hidden="true"></i> Attachments <span class="count-pill">{{ att['items'] | length }}</span></h2>
+  </div>
+  {% if att['items'] %}
+  <ul class="item-list attachments-list">
+    {% for f in att['items'] %}
+    <li>
+      <span class="item-icon"><i class="bi bi-{{ 'file-earmark-x' if f.missing else f.icon }}" aria-hidden="true"></i></span>
+      {% set meta %}<span class="visually-hidden">{{ f.kind }}, </span>{{ f.size }} · added {{ f.at | timeago }}{% if f.by %} by {{ f.by }}{% endif %}{% endset %}
+      {% if f.missing %}
+      <div class="item-main">
+        <span class="item-title text-body-secondary">{{ f.name }}</span>
+        <span class="item-meta">File missing · {{ meta }}</span>
+      </div>
+      {% else %}
+      <a class="item-main item-link" href="{{ url_for('attachments.download', attachment_id=f.id) }}" title="{{ f.name }}">
+        <span class="item-title">{{ f.name }}</span>
+        <span class="item-meta" title="{{ f.at_text }}">{{ meta }}</span>
+      </a>
+      {% endif %}
+      {% if att.can_delete %}
+      <form method="POST" action="{{ url_for('attachments.delete', attachment_id=f.id) }}" class="d-inline"
+            data-confirm="'{{ f.name }}' will be permanently deleted." data-confirm-title="Delete file?" data-confirm-ok="Delete">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-ghost btn-sm" aria-label="Delete {{ f.name }}" title="Delete"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if att.can_upload %}
+  <div class="{{ 'panel-footer' if att['items'] else 'panel-body' }}">
+    {% if not att['items'] %}<p class="small text-body-secondary mb-2">No files yet. Keep a config export, a manual or a photo here.</p>{% endif %}
+    {% if att.full %}
+      <p class="small text-body-secondary mb-0">This {{ att.owner_type }} has the maximum of {{ feat.attachments.max_files }} files. Delete one to add another.</p>
+    {% else %}
+    <form method="POST" enctype="multipart/form-data" data-attachments-upload data-max-bytes="{{ feat.attachments.max_bytes }}"
+          action="{{ url_for('attachments.upload', owner_type=att.owner_type, owner_key=att.owner_key) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label for="attachmentsFile" class="visually-hidden">File to attach</label>
+      <input type="file" class="form-control form-control-sm" id="attachmentsFile" name="attachments_file" required aria-describedby="attachmentsHelp">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+        <span class="form-text small m-0" id="attachmentsHelp" aria-live="polite" data-default-text="Up to {{ feat.attachments.max_files }} files, 5 MB each. Included in backups.">Up to {{ feat.attachments.max_files }} files, 5 MB each. Included in backups.</span>
+        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Upload</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endif %}

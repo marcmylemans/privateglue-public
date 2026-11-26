@@ -1,0 +1,4 @@
+/* Attachments: file names are often long and alike, so let them use two lines instead of
+   cutting them short, and let the "added ... by ..." line wrap in the narrow columns. */
+.attachments-list .item-title { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.attachments-list .item-meta { white-space: normal; }

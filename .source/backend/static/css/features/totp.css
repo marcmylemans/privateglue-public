@@ -1,0 +1,9 @@
+/* One-time codes: a thin countdown bar under the code, and the list icon. */
+.totp-code { letter-spacing: .08em; }
+.totp-meter { height: 3px; border-radius: 999px; background: var(--pg-muted-bg); overflow: hidden; margin-top: .4rem; }
+.totp-meter > span { display: block; height: 100%; width: 100%; background: var(--pg-brand); opacity: .7; transition: width 1s linear, background-color .2s; }
+.totp-meter > span.no-anim { transition: none; }
+.totp.is-expiring .totp-meter > span { background: var(--bs-warning); }
+.totp.is-expiring .totp-code,
+.totp.is-expiring [data-totp-status] { color: var(--bs-warning-text-emphasis); }
+.totp-flag { color: var(--bs-tertiary-color); font-size: .85rem; line-height: 1; }

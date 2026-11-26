@@ -7,6 +7,8 @@
   <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary"><i class="bi bi-person-plus" aria-hidden="true"></i> Add user</a>
 {% endcall %}
 
+{% set tf_on = feat.two_factor.enabled_user_ids() if feat.two_factor else [] %}
+{% set tf_policy_now = feat.two_factor.policy() if feat.two_factor else 'nobody' %}
 <div class="table-panel mb-3">
   <div class="table-responsive">
     <table class="table pg-table">
@@ -15,6 +17,7 @@
           <th scope="col">User</th>
           <th scope="col">Role</th>
           <th scope="col" class="d-none d-sm-table-cell">Password</th>
+          {% if feat.two_factor %}<th scope="col" class="d-none d-md-table-cell">Two-factor</th>{% endif %}
           <th scope="col" class="actions"><span class="visually-hidden">Actions</span></th>
         </tr>
       </thead>
@@ -36,6 +39,7 @@
               <span class="small text-body-secondary"><span class="status-dot ok me-1" aria-hidden="true"></span>Set</span>
             {% endif %}
           </td>
+          {% if feat.two_factor %}<td class="d-none d-md-table-cell">{% include "features/two_factor/admin_users_cell.html" %}</td>{% endif %}
           <td class="actions">
             <div class="dropdown">
               <button class="btn btn-ghost btn-sm" type="button" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" aria-label="Actions for {{ user.username }}">
@@ -63,6 +67,8 @@
     </table>
   </div>
 </div>
+
+{% if feat.two_factor %}{% include "features/two_factor/admin_users_panel.html" %}{% endif %}
 
 <div class="panel">
   <div class="panel-body small text-body-secondary">

@@ -13,7 +13,9 @@ Good for:
 
 - **Device inventory**: hostname, IP, MAC, OS, location and serial numbers, with filtering and CSV import
 - **Markdown notes** with live preview, code highlighting, tags and device links
-- **Encrypted credentials**, linked to devices, copied to the clipboard without showing them on screen
+- **Encrypted credentials**, linked to devices, copied to the clipboard without showing them on screen, with an address to open, one-time codes, extra encrypted fields for SSH keys and API tokens, tags, and password age with reminders
+- **Attachments and dates to watch**: files on devices and notes, and warranty, licence and certificate end dates with a dashboard reminder
+- **Two-factor sign-in** with an authenticator app, and an **activity log** of who opened, copied and changed what
 - **Search** across devices, notes (including their text) and credentials
 - **Proxmox VE and SNMP**: live node, VM, container and storage details; switch interfaces and VLANs
 - **Users and roles** (admin, editor, read-only), one-click backups and restore
@@ -21,7 +23,7 @@ Good for:
 
 Screenshots: [privateglue.app](https://privateglue.app/#tour)
 
-**Full guide:** installing, updating, backups, the network probe, integrations and troubleshooting are in the [wiki](https://github.com/marcmylemans/privateglue-public/wiki).
+**Full guide:** installing, updating, backups, the network probe, integrations and troubleshooting are in the [documentation](https://privateglue.app/docs/). What each version brought: [What's new](https://privateglue.app/docs/changelog/).
 
 ## Quick start
 
@@ -44,7 +46,7 @@ In the shell of your Proxmox node:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/marcmylemans/privateglue-public/main/ct/privateglue.sh)"
 ```
 
-This creates an LXC container and installs PrivateGlue in it. Details are in the [guide](https://github.com/marcmylemans/privateglue-public/wiki/Install-on-Proxmox).
+This creates an LXC container and installs PrivateGlue in it. Details are in the [guide](https://privateglue.app/docs/install-on-proxmox/).
 
 Using **Dockge** or **Portainer**? Paste `docker-compose.yml` as the stack and put `SECRET_KEY=...` in the stack's environment (`.env`). The compose file passes it into the container.
 

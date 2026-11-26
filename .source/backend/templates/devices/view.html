@@ -7,6 +7,7 @@
 {% block content %}
 {% set subtitle %}{{ device.device_type | type_label or 'Device' }}{% if device.location %} · {{ device.location }}{% endif %}{% endset %}
 {% call ui.page_header(device.hostname, subtitle, icon=device.device_type | device_icon) %}
+  {% for tpl in feature_templates('device_view_header') %}{% include tpl %}{% endfor %}
   {% if can_edit %}
     <a href="{{ url_for('devices.clone_device', id=device.id) }}" class="btn btn-outline-secondary"><i class="bi bi-copy" aria-hidden="true"></i> Duplicate</a>
     <a href="{{ url_for('devices.edit_device', id=device.id) }}" class="btn btn-primary"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>
@@ -85,6 +86,7 @@
       {% endif %}
     </section>
     {% endif %}
+    {% for tpl in feature_templates('device_view_main_panels') %}{% include tpl %}{% endfor %}
   </div>
 
   <div class="col-xl-4">
@@ -103,6 +105,7 @@
             <span class="item-meta mono">{{ cred.username or 'No username' }}</span>
           </a>
           {% if cred.username %}{{ ui.copy_button(cred.username, 'Copy username for ' ~ cred.title) }}{% endif %}
+          {% for tpl in feature_templates('device_view_credential_item') %}{% include tpl %}{% endfor %}
         </li>
         {% endfor %}
       </ul>
@@ -129,6 +132,8 @@
       <div class="panel-body text-body-secondary small">No notes linked to this device.</div>
       {% endif %}
     </section>
+
+    {% for tpl in feature_templates('device_view_side_panels') %}{% include tpl %}{% endfor %}
 
     {% if is_admin %}
     <section class="panel panel-danger" aria-labelledby="dangerTitle">

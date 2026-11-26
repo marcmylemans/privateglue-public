@@ -56,6 +56,10 @@ Each note is a Markdown file in the `./notes` folder of your install, with its t
 
 To keep notes in a Git repository with history, see the GitHub notes sync under [Integrations](Integrations).
 
+## Attachments
+
+A note can hold files, in the **Attachments** panel next to the note. It works the same as on a device: 5 MB per file, 20 files per note, part of backups, removed with the note. See [Devices](Devices).
+
 ## Images
 
-A note can show an image that is hosted elsewhere, as long as its address starts with `https://`. Images cannot be uploaded into PrivateGlue.
+A note can show an image that is hosted elsewhere, as long as its address starts with `https://`. Images cannot be shown from inside PrivateGlue: an attached image downloads, it does not appear in the note.

@@ -42,6 +42,30 @@ A device page shows its details, the credentials and notes linked to it, and for
 
 A device that came from an integration shows **Synced from** with a link to its record in the other system.
 
+### Open and connect
+
+- **Open web interface** appears when a credential linked to the device has a web address. It opens that address in a new tab. See [Credentials](Credentials).
+- **Copy SSH command** appears when the device has an IP address. It copies `ssh <username>@<ip>`, with the username of the first linked credential.
+
+### Dates to watch
+
+Warranties, support contracts, licences and certificates run out. Record their end dates under **Dates to watch** when you edit a device: a kind, an optional label, the date and an optional note.
+
+- The device page lists them, soonest first. Red means the date has passed, amber means today or within 60 days.
+- Those red and amber ones also show in **Running out soon** on the dashboard, the five most urgent first.
+- A device can have 12 dates. Clearing a date removes that row when you save.
+- Duplicating a device does not copy its dates.
+
+### Attachments
+
+Keep files with a device: a config export, the warranty PDF, a rack photo.
+
+- Editors and administrators upload under **Attachments** on the device page. Everyone who can see the device can download. Only administrators delete.
+- A file can be 5 MB and a device can have 20 files.
+- A file always downloads. Nothing opens inside PrivateGlue, not even a PDF or an image.
+- Files are part of backups, and they are deleted together with the device.
+- Files are stored as they are, not encrypted, like notes. Put passwords and keys in a credential.
+
 ## Linking
 
 Credentials and notes can be linked to devices, from either side. A linked credential or note shows on the device page, so everything about one machine is in one place.

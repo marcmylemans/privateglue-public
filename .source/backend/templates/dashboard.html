@@ -66,6 +66,10 @@
   </div>
 </div>
 
+{# Things that need attention. Each piece brings its own column; the row only exists when there is something to show. #}
+{% set alerts %}{% for tpl in feature_templates('dashboard_alerts') %}{% include tpl %}{% endfor %}{% endset %}
+{% if alerts | trim %}<div class="row g-3 mb-3 dashboard-alerts">{{ alerts }}</div>{% endif %}
+
 <div class="row g-3">
   <div class="col-lg-7">
     <section class="panel h-100" aria-labelledby="recentDevicesTitle">
@@ -161,6 +165,7 @@
       {% endif %}
     </section>
   </div>
+  {% for tpl in feature_templates('dashboard_panels') %}{% include tpl %}{% endfor %}
 </div>
 {% endif %}
 {% endblock %}

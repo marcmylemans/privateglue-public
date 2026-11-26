@@ -10,12 +10,15 @@
 
 **Use**
 - [Users and roles](Users-and-roles)
+- [Two-factor sign-in](Two-factor-sign-in)
 - [Devices](Devices)
 - [Network scan](Network-scan)
 - [Integrations](Integrations)
 - [Notes](Notes)
 - [Credentials](Credentials)
+- [Activity](Activity-log)
 
 **Help**
+- [What's new](Changelog)
 - [Security](Security)
 - [Troubleshooting](Troubleshooting)

@@ -1,0 +1,25 @@
+{% set dates_soon = feat.dates.running_out() %}
+{% if dates_soon[1] %}
+<div class="col-lg-6">
+  <section class="panel h-100" aria-labelledby="datesSoonTitle">
+    <div class="panel-header">
+      <h2 class="panel-title" id="datesSoonTitle"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Running out soon <span class="count-pill">{{ dates_soon[1] }}</span></h2>
+    </div>
+    <ul class="item-list">
+      {% for entry in dates_soon[0] %}
+      <li>
+        <span class="item-icon" title="{{ entry.kind_label }}"><i class="bi bi-{{ entry.icon }}" aria-hidden="true"></i></span>
+        <a class="item-main item-link" href="{{ url_for('devices.view_device', id=entry.device.id) }}">
+          <span class="item-title">{{ entry.device.hostname }}</span>
+          <span class="item-meta">{{ entry.kind_label }}{% if entry.label %} · {{ entry.label }}{% endif %}</span>
+        </a>
+        <span class="chip dates-chip dates-{{ entry.tone }}" title="{{ entry.long }}">{{ entry.status }}</span>
+      </li>
+      {% endfor %}
+      {% if dates_soon[1] > dates_soon[0] | length %}
+      <li class="small"><a class="text-decoration-none" href="{{ url_for('devices.list_devices', clear=1) }}">and {{ dates_soon[1] - dates_soon[0] | length }} more</a></li>
+      {% endif %}
+    </ul>
+  </section>
+</div>
+{% endif %}

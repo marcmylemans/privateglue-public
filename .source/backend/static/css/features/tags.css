@@ -1,0 +1,11 @@
+/* Tags on credentials. Everything else uses the app's own chip classes. */
+
+/* The tag filter sits in the list toolbar on a line of its own, under the filter box,
+   where the notes list has its tag chips. */
+.toolbar .tags-filter { order: 10; flex-basis: 100%; }
+
+/* Tag chips next to a title in the credential list: always on a line of their own under the title,
+   so every row reads the same.
+   position: relative keeps the screen reader text inside the scrolling table, so it
+   cannot make the page wider on a phone. */
+.pg-table .tags-row { position: relative; flex-basis: 100%; }

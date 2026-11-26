@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% set active_nav = 'profile' %}
+{% block title %}Set up two-factor sign-in · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Profile', url_for('auth.profile')), ('Two-factor sign-in', None)]) }}{% endblock %}
+
+{% block content %}
+<div class="narrow-page">
+{{ ui.page_header('Set up two-factor sign-in', 'After your password, you also type a code from an app on your phone.', icon='shield-lock') }}
+
+{% if required %}
+<div class="alert alert-warning d-flex gap-2" role="note">
+  <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+  <div>Your administrator requires two-factor sign-in for your account. Set it up to continue.</div>
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('two_factor.setup') }}" class="panel" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="panel-body">
+    <ol class="steps">
+      <li>
+        <div class="step-title">Scan this with your authenticator app</div>
+        <p class="small text-body-secondary mb-3">Any authenticator app works, for example the one in your password manager. No phone number or cloud service involved.</p>
+        <div class="tf-setup-grid">
+          {% if qr %}<div class="tf-qr">{{ qr }}</div>{% endif %}
+          <div class="tf-key">
+            <label class="form-label small" for="tfSecret">{{ 'Or type the key by hand' if qr else 'Type this key in your app' }}</label>
+            <div class="input-group">
+              <textarea class="form-control mono tf-secret" id="tfSecret" rows="2" readonly autocomplete="off" spellcheck="false">{{ secret_grouped }}</textarea>
+              <button type="button" class="btn btn-outline-secondary" data-copy="#tfSecret" data-copy-message="Key copied" aria-label="Copy key" title="Copy key"><i class="bi bi-copy" aria-hidden="true"></i></button>
+            </div>
+            <div class="form-text">Time based, 6 digits, every 30 seconds.</div>
+          </div>
+        </div>
+      </li>
+      <li>
+        <label class="step-title d-block mb-2" for="tfCode">Type the code it shows</label>
+        <input type="text" name="code" id="tfCode" class="form-control mono tf-code-input{{ ' is-invalid' if error }}" placeholder="000000"
+               inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required
+               {% if error %}aria-describedby="tfCodeError" aria-invalid="true" autofocus{% endif %}>
+        {% if error %}<div class="invalid-feedback" id="tfCodeError">{{ error }}</div>{% endif %}
+      </li>
+      <li>
+        <div class="step-title">Save your recovery codes</div>
+        <p class="small text-body-secondary mb-0">Ten one-time codes for when your phone is not at hand. You see them on the next page, once.</p>
+      </li>
+    </ol>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-shield-check" aria-hidden="true"></i> Turn on two-factor sign-in</button>
+    {% if required %}
+    <button type="submit" form="tfSignOut" class="btn btn-outline-secondary">Sign out</button>
+    {% else %}
+    <a href="{{ url_for('auth.profile') }}" class="btn btn-outline-secondary">Cancel</a>
+    {% endif %}
+  </div>
+</form>
+{% if required %}
+<form method="POST" action="{{ url_for('auth.logout') }}" id="tfSignOut" hidden>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+</div>
+{% endblock %}

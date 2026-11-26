@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% block title %}Activity · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+{% call ui.page_header('Activity', 'Who looked at, copied or changed what. Administrators only. Entries cannot be edited.', icon='clock-history') %}
+  <a href="{{ url_for('audit.export', **filter_args()) }}" class="btn btn-outline-secondary"><i class="bi bi-download" aria-hidden="true"></i> Export CSV</a>
+{% endcall %}
+
+<form method="GET" action="{{ url_for('audit.activity') }}" class="toolbar" role="search" aria-label="Filter activity">
+  {% if filters.target %}<input type="hidden" name="target" value="{{ filters.target[0] }}:{{ filters.target[1] }}">{% endif %}
+  <div class="search-field">
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <label for="auditQ" class="visually-hidden">Search activity</label>
+    <input type="search" id="auditQ" name="q" class="form-control" value="{{ filters.q }}"
+           placeholder="Search a user, item or IP address…" autocomplete="off">
+  </div>
+  <label for="auditUser" class="visually-hidden">Who</label>
+  <select name="user" id="auditUser" class="form-select" data-autosubmit>
+    <option value="">Everyone</option>
+    {% for name in usernames %}<option value="{{ name }}" {% if filters.user == name %}selected{% endif %}>{{ name }}</option>{% endfor %}
+  </select>
+  <label for="auditKind" class="visually-hidden">Kind of activity</label>
+  <select name="kind" id="auditKind" class="form-select" data-autosubmit>
+    <option value="">All activity</option>
+    {% for value, kind in kinds.items() %}<option value="{{ value }}" {% if filters.kind == value %}selected{% endif %}>{{ kind[0] }}</option>{% endfor %}
+  </select>
+  <label for="auditPeriod" class="visually-hidden">Period</label>
+  <select name="period" id="auditPeriod" class="form-select" data-autosubmit>
+    {% for value, label in periods.items() %}<option value="{{ value }}" {% if filters.period == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit" class="btn btn-outline-secondary">Apply</button></noscript>
+  {% if filtered %}
+    <a href="{{ url_for('audit.activity') }}" class="btn btn-ghost"><i class="bi bi-x-lg" aria-hidden="true"></i> Clear filters</a>
+  {% endif %}
+</form>
+
+{% if filters.target %}
+<p class="small text-body-secondary mb-3">
+  Showing activity for <strong class="text-body">{{ target_label }}</strong>.
+  <a href="{{ url_for('audit.activity', **filter_args(target=None)) }}">Show all activity</a>
+</p>
+{% endif %}
+
+{% if rows %}
+<div class="table-panel mb-3">
+  <div class="table-responsive">
+    <table class="table pg-table audit-table">
+      <thead>
+        <tr>
+          <th scope="col">When</th>
+          <th scope="col">Who</th>
+          <th scope="col">What</th>
+          <th scope="col">Item</th>
+          <th scope="col" class="d-none d-md-table-cell">IP address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="text-nowrap"><time datetime="{{ row.at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" title="{{ exact(row.at) }}" data-audit-time>{{ ago(row.at, now) }}</time></td>
+          <td>{% if row.username %}{{ row.username }}{% else %}<span class="text-body-tertiary">unknown</span>{% endif %}</td>
+          <td>
+            <span class="audit-what audit-tone-{{ row.tone }}">{{ row.sentence }}</span>
+            {% if row.detail %}<div class="small text-body-secondary mt-1">{{ row.detail }}</div>{% endif %}
+          </td>
+          <td>
+            {% if row.label or row.target_id %}
+              {% if links.get(row.id) %}<a href="{{ links[row.id] }}">{{ row.label or row.target_id }}</a>
+              {% else %}{{ row.label or row.target_id }}{% endif %}
+            {% else %}<span class="text-body-tertiary">–</span>{% endif %}
+            {% if row.ip %}<div class="small text-body-secondary mono d-md-none">{{ row.ip }}</div>{% endif %}
+          </td>
+          <td class="d-none d-md-table-cell mono small">{{ row.ip or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<nav class="d-flex flex-wrap align-items-center justify-content-between gap-2" aria-label="Pages">
+  <span class="small text-body-secondary">Showing {{ first }} to {{ last }} of {{ total }} entr{{ 'y' if total == 1 else 'ies' }}. Kept for 12 months.</span>
+  <div class="d-flex gap-2">
+    {% if page > 1 %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('audit.activity', **filter_args(page=page - 1)) }}" rel="prev"><i class="bi bi-chevron-left" aria-hidden="true"></i> Newer</a>
+    {% endif %}
+    {% if page < pages %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('audit.activity', **filter_args(page=page + 1)) }}" rel="next">Older <i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    {% endif %}
+  </div>
+</nav>
+{% else %}
+<div class="panel">
+  {% if filtered %}
+    {{ ui.empty_state('funnel', 'Nothing matches these filters', 'Try a longer period or clear the filters.', url_for('audit.activity'), 'Clear filters', 'x-lg') }}
+  {% else %}
+    {{ ui.empty_state('clock-history', 'No activity yet', 'Sign-ins, opened credentials, copied passwords and every change will show up here.') }}
+  {% endif %}
+</div>
+{% endif %}
+
+<p class="small text-body-secondary mt-4 mb-0">
+  <i class="bi bi-info-circle" aria-hidden="true"></i>
+  Recorded: opening a credential, showing or copying a password, code or extra field, every change and delete, sign-ins and failed sign-ins, and changes to settings and users. The password itself is never written to the log.
+</p>
+{% endblock %}

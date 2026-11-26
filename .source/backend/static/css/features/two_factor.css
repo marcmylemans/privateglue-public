@@ -1,0 +1,12 @@
+/* Two-factor sign-in. The QR code stays dark on light in both themes: scanners need that. */
+.tf-setup-grid { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.25rem; }
+.tf-qr { flex: 0 0 auto; width: 11rem; padding: .5rem; background: var(--bs-white); border: 1px solid var(--pg-border); border-radius: .5rem; line-height: 0; }
+.tf-qr-svg { display: block; width: 100%; height: auto; }
+.tf-qr-line { stroke: var(--bs-black); }
+.tf-key { flex: 1 1 14rem; min-width: 0; }
+/* The key wraps on a phone instead of scrolling out of view. */
+.tf-secret { resize: none; field-sizing: content; min-height: 0; }
+.tf-code-input { max-width: 12rem; letter-spacing: .15em; }
+.tf-codes { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: .5rem 1.5rem; margin: 0; padding-left: 1.75rem; font-size: 1rem; }
+.tf-codes li::marker { color: var(--bs-tertiary-color); font-size: .8rem; }
+.tf-help { max-width: 420px; }

@@ -1,0 +1,20 @@
+{% if feat.two_factor.is_enabled(user) %}
+<section class="panel" aria-labelledby="tfResetTitle">
+  <div class="panel-header">
+    <h2 class="panel-title" id="tfResetTitle"><i class="bi bi-shield-lock" aria-hidden="true"></i> Two-factor sign-in</h2>
+    <span class="small"><span class="status-dot ok me-1" aria-hidden="true"></span>On</span>
+  </div>
+  <div class="panel-body d-flex flex-wrap align-items-center justify-content-between gap-2">
+    {% if user.id == current_user.id %}
+    <span class="small text-body-secondary">This is your own account. To turn it off, use your <a href="{{ url_for('auth.profile') }}">profile</a>.</span>
+    {% else %}
+    <span class="small text-body-secondary">For when they lost their phone and their recovery codes. They then sign in with their password alone and can set it up again.</span>
+    <form method="POST" action="{{ url_for('two_factor.reset', user_id=user.id) }}" class="d-inline"
+          data-confirm="'{{ user.username }}' will sign in with their password alone until they set up two-factor sign-in again. They are signed out now." data-confirm-title="Reset two-factor sign-in?" data-confirm-ok="Reset">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-outline-danger"><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset two-factor sign-in</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endif %}

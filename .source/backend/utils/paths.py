@@ -5,6 +5,7 @@ why it is the default and why nothing changes for container installs. A native i
 (for example the Proxmox LXC script) sets PRIVATEGLUE_HOME to wherever the app was put.
 
     <home>/data      database, probe key, discovered devices
+    <home>/data/files/<feature>   files a feature keeps, such as attachments
     <home>/notes     Markdown notes
     <home>/backups   backups made in the app
     <home>/secret    encryption key for stored credentials
@@ -19,6 +20,18 @@ BACKUP_DIR = os.path.join(HOME, "backups")
 SECRET_DIR = os.path.join(HOME, "secret")
 
 DB_PATH = os.path.join(DATA_DIR, "app.db")
+# Inside the data folder on purpose: every install already keeps that folder (it is a
+# volume in Docker), so nobody has to change their set-up to keep these files.
+FILES_DIR = os.path.join(DATA_DIR, "files")
+
+
+def feature_files_dir(feature_key):
+    """The folder where a feature keeps its files. Created when asked for."""
+    if not feature_key.replace("_", "").isalnum():
+        raise ValueError("Unsafe feature key.")
+    folder = os.path.join(FILES_DIR, feature_key)
+    os.makedirs(folder, exist_ok=True)
+    return folder
 
 
 def secret_key_path():

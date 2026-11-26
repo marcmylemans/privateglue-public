@@ -12,7 +12,9 @@ The account created on the setup screen is the administrator. After that there i
 | **Read stored passwords** | yes | yes | yes |
 | Add and change devices, notes and credentials | | yes | yes |
 | Import devices (CSV, discovered devices) | | yes | yes |
-| Delete devices, notes and credentials | | | yes |
+| Upload attachments | | yes | yes |
+| Delete devices, notes, credentials and attachments | | | yes |
+| See the activity log | | | yes |
 | Manage accounts | | | yes |
 | Backups, integrations, probe key, scanning from the server | | | yes |
 
@@ -34,6 +36,8 @@ Under **Users** you can change a role, set a new password or delete an account.
 ## Your own account
 
 Open the menu with your name at the top right and choose **Profile & password** to change your password. Changing it signs out your other devices.
+
+The same page is where you turn on [two-factor sign-in](Two-factor-sign-in).
 
 ## Forgotten password
 

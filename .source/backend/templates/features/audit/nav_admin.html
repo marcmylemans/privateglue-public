@@ -1,0 +1,3 @@
+<a class="nav-link{% if request.blueprint == 'audit' %} active{% endif %}" href="{{ url_for('audit.activity') }}"{% if request.blueprint == 'audit' %} aria-current="page"{% endif %}>
+  <i class="bi bi-clock-history" aria-hidden="true"></i><span>Activity</span>
+</a>

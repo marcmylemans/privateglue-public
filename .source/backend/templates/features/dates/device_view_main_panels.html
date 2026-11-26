@@ -1,0 +1,21 @@
+{% set dates_entries = feat.dates.for_device(device) %}
+{% if dates_entries %}
+<section class="panel" aria-labelledby="datesTitle">
+  <div class="panel-header">
+    <h2 class="panel-title" id="datesTitle"><i class="bi bi-calendar-event" aria-hidden="true"></i> Dates to watch <span class="count-pill">{{ dates_entries | length }}</span></h2>
+    {% if can_edit %}<a href="{{ url_for('devices.edit_device', id=device.id) }}#datesSection" class="small"><i class="bi bi-pencil" aria-hidden="true"></i> Edit</a>{% endif %}
+  </div>
+  <ul class="item-list">
+    {% for entry in dates_entries %}
+    <li>
+      <span class="item-icon" title="{{ entry.kind_label }}"><i class="bi bi-{{ entry.icon }}" aria-hidden="true"></i></span>
+      <div class="item-main">
+        <span class="item-title">{{ entry.title }}</span>
+        <span class="item-meta">{% if entry.label %}{{ entry.kind_label }} · {% endif %}<time datetime="{{ entry.iso }}">{{ entry.long }}</time>{% if entry.note %} · {{ entry.note }}{% endif %}</span>
+      </div>
+      <span class="chip dates-chip dates-{{ entry.tone }}">{{ entry.status }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

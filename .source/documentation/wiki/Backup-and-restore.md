@@ -6,7 +6,10 @@ A backup is one zip file with:
 
 - the database (devices, credentials, accounts, integration settings),
 - the encryption key that protects stored passwords,
-- all notes.
+- all notes,
+- the files attached to devices and notes.
+
+The database also holds the activity log and everyone's two-factor sign-in, so those come back with a restore.
 
 **Treat a backup like a password export.** It holds the encrypted passwords and the key to read them. Store it somewhere only you can reach.
 

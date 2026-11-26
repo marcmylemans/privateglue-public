@@ -1,0 +1,12 @@
+/* Activity log: the coloured "what happened" label, built like .role-badge. */
+.audit-what { display: inline-block; font-size: .8rem; font-weight: 600; padding: .15rem .55rem; border-radius: 999px; white-space: nowrap; }
+.audit-tone-plain { background: var(--pg-muted-bg); color: var(--bs-body-color); }
+.audit-tone-change { background: var(--pg-brand-soft); color: var(--pg-brand-text); }
+.audit-tone-secret { background: rgba(var(--bs-warning-rgb), .14); color: var(--bs-warning-text-emphasis); }
+.audit-tone-danger { background: rgba(var(--bs-danger-rgb), .12); color: var(--bs-danger-text-emphasis); }
+.audit-tone-good { background: rgba(var(--bs-success-rgb), .14); color: var(--bs-success-text-emphasis); }
+.audit-table { min-width: 44rem; }
+.audit-table td { vertical-align: top; }
+.audit-table td:nth-child(4) { overflow-wrap: anywhere; min-width: 10rem; }
+.audit-panel-list > li { flex-wrap: wrap; justify-content: space-between; }
+.audit-panel-list .item-main { overflow-wrap: anywhere; }

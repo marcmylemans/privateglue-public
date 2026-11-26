@@ -1,0 +1,8 @@
+{% set addr_cred = feat.address.web_credential(credentials) %}
+{% if addr_cred %}
+  <a href="{{ addr_cred.address }}" class="btn btn-outline-secondary" target="_blank" rel="noopener noreferrer" data-audit="credential.address_opened" data-audit-target="credential:{{ addr_cred.id }}"><i class="bi bi-box-arrow-up-right" aria-hidden="true"></i> Open web interface<span class="visually-hidden"> (opens in a new tab)</span></a>
+{% endif %}
+{% set addr_ssh = feat.address.ssh_command(device, credentials) %}
+{% if addr_ssh %}
+  <button type="button" class="btn btn-outline-secondary" data-copy-text="{{ addr_ssh }}" data-copy-message="SSH command copied" title="{{ addr_ssh }}"><i class="bi bi-terminal" aria-hidden="true"></i> Copy SSH command</button>
+{% endif %}

@@ -1,0 +1,3 @@
+{% if user.id in tf_on %}<span class="small"><span class="status-dot ok me-1" aria-hidden="true"></span>On</span>
+{% elif feat.two_factor.policy_applies(user, tf_policy_now) %}<span class="small"><span class="status-dot warn me-1" aria-hidden="true"></span>Required, not set up</span>
+{% else %}<span class="small text-body-secondary">Off</span>{% endif %}

@@ -41,5 +41,6 @@
     <a href="{{ url_for('admin.list_users') }}" class="btn btn-outline-secondary">Cancel</a>
   </div>
 </form>
+{% if feat.two_factor %}{% include "features/two_factor/admin_edit_user.html" %}{% endif %}
 </div>
 {% endblock %}

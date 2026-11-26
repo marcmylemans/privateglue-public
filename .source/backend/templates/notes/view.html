@@ -22,6 +22,7 @@
         {% if content %}{{ content | safe }}{% else %}<p class="text-body-tertiary">This note is empty.{% if can_edit %} <a href="{{ url_for('notes.edit_note', filename=filename) }}">Start writing</a>.{% endif %}</p>{% endif %}
       </div>
     </article>
+    {% for tpl in feature_templates('note_view_main_panels') %}{% include tpl %}{% endfor %}
   </div>
 
   <aside class="col-lg-3 order-1 order-lg-2" aria-label="Note details">
@@ -46,6 +47,7 @@
       </div>
       {% endif %}
     </section>
+    {% for tpl in feature_templates('note_view_side_panels') %}{% include tpl %}{% endfor %}
   </aside>
 </div>
 {% endblock %}

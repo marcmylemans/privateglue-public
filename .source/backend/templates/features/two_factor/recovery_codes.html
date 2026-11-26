@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% import '_macros.html' as ui %}
+{% set active_nav = 'profile' %}
+{% block title %}Recovery codes · {{ APP_NAME }}{% endblock %}
+{% block breadcrumb %}{{ ui.breadcrumbs([('Profile', url_for('auth.profile')), ('Recovery codes', None)]) }}{% endblock %}
+
+{% block content %}
+<div class="narrow-page">
+{{ ui.page_header('Save your recovery codes', 'Each code signs you in once when your phone is not at hand.', icon='life-preserver') }}
+
+<section class="panel" aria-labelledby="tfCodesTitle">
+  <div class="panel-header">
+    <h2 class="panel-title" id="tfCodesTitle"><i class="bi bi-key" aria-hidden="true"></i> Recovery codes</h2>
+    <span class="count-pill">{{ codes|length }}</span>
+  </div>
+  <div class="panel-body">
+    <div class="alert alert-warning d-flex gap-2" role="note">
+      <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+      <div><strong>These codes will not be shown again.</strong> Store them somewhere safe, for example in your password manager or on paper.{% if not first_time %} Your old codes no longer work.{% endif %}</div>
+    </div>
+    <ol class="tf-codes mono" aria-label="Recovery codes">
+      {% for code in codes %}<li>{{ code }}</li>{% endfor %}
+    </ol>
+    <textarea id="tfCodesText" class="visually-hidden" readonly tabindex="-1" aria-hidden="true">{% for code in codes %}{{ code }}
+{% endfor %}</textarea>
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-outline-secondary" data-copy="#tfCodesText" data-copy-message="Recovery codes copied"><i class="bi bi-copy" aria-hidden="true"></i> Copy</button>
+    <button type="button" class="btn btn-outline-secondary" data-tf-download="#tfCodesText" data-tf-filename="{{ APP_NAME | lower | replace(' ', '-') }}-recovery-codes.txt"><i class="bi bi-download" aria-hidden="true"></i> Download as text</button>
+    <a href="{{ url_for('auth.profile') }}" class="btn btn-primary ms-sm-auto">I have saved them</a>
+  </div>
+</section>
+</div>
+{% endblock %}

@@ -45,6 +45,7 @@
     <div class="form-actions"><button type="submit" class="btn btn-primary">Update password</button></div>
   </form>
 </section>
+{% for tpl in feature_templates('profile_panels') %}{% include tpl %}{% endfor %}
 
 <section class="panel panel-danger" aria-labelledby="deleteAccountTitle">
   <div class="panel-header"><h2 class="panel-title" id="deleteAccountTitle"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Delete account</h2></div>

@@ -1,0 +1,3 @@
+/* Address column in the credential list: long addresses end in an ellipsis. */
+.address-cell { display: flex; align-items: center; gap: .25rem; min-width: 0; }
+.address-cell .address-text { display: inline-block; max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -76,3 +76,27 @@ def check_and_upgrade_database(db_path=None):
          conn.close()
      else:
          print("Non-SQLite database detected. No auto-upgrade performed.")
+
+
+def upgrade_feature_columns(db_path=None):
+    """Add the columns that features declared on tables that already exist. On a new
+    database there is nothing to do: create_all() makes every table complete."""
+    from backend import features
+
+    db_path = db_path or paths.DB_PATH
+    if not db.engine.url.drivername.startswith("sqlite") or not os.path.exists(db_path):
+        return []
+    conn = sqlite3.connect(db_path)
+    try:
+        def table_columns(table):
+            if not table.replace("_", "").isalnum():
+                return []
+            return [row[1] for row in conn.execute(f'PRAGMA table_info("{table}");').fetchall()]
+
+        added = features.upgrade_columns(conn, table_columns)
+        conn.commit()
+    finally:
+        conn.close()
+    for name in added:
+        print(f"Added column {name}.")
+    return added

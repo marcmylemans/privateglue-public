@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set bare_layout = true %}
+{% block title %}Enter your code · {{ APP_NAME }}{% endblock %}
+
+{% block content %}
+<div class="bare-card">
+  <h1>Enter your code</h1>
+  {% if recovery %}
+  <p class="text-body-secondary mb-4">Signing in as <strong>{{ username }}</strong>. Type one of the recovery codes you saved when you turned on two-factor sign-in. Each code works once.</p>
+  {% else %}
+  <p class="text-body-secondary mb-4">Signing in as <strong>{{ username }}</strong>. Open your authenticator app and type the 6-digit code for {{ APP_NAME }}.</p>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('two_factor.verify') }}" novalidate>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% if recovery %}<input type="hidden" name="recovery" value="1">{% endif %}
+    <div class="mb-4">
+      {% if recovery %}
+      <label class="form-label" for="tfCode">Recovery code</label>
+      <input type="text" name="code" id="tfCode" class="form-control mono{{ ' is-invalid' if error }}" placeholder="xxxx-xxxx-xxxx"
+             autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40" required autofocus
+             {% if error %}aria-describedby="tfCodeError" aria-invalid="true"{% endif %}>
+      {% else %}
+      <label class="form-label" for="tfCode">6-digit code</label>
+      <input type="text" name="code" id="tfCode" class="form-control mono{{ ' is-invalid' if error }}" placeholder="000000"
+             inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required autofocus
+             {% if error %}aria-describedby="tfCodeError" aria-invalid="true"{% endif %}>
+      {% endif %}
+      {% if error %}<div class="invalid-feedback" id="tfCodeError">{{ error }}</div>{% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary w-100 py-2">Verify and sign in</button>
+  </form>
+
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 small">
+    {% if recovery %}
+    <a href="{{ url_for('two_factor.verify') }}">Use your authenticator app</a>
+    {% else %}
+    <a href="{{ url_for('two_factor.verify', recovery=1) }}">Use a recovery code</a>
+    {% endif %}
+    <form method="POST" action="{{ url_for('two_factor.cancel') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-link btn-sm text-body-secondary p-0">Sign in as someone else</button>
+    </form>
+  </div>
+</div>
+<p class="small text-body-secondary text-center mt-3 mb-0 tf-help">Lost your phone and your recovery codes? An administrator can reset two-factor sign-in for your account.</p>
+{% endblock %}

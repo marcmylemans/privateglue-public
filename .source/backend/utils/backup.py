@@ -13,9 +13,40 @@ def _is_safe_member(target_dir, member_name):
 def _is_allowed_member(member_name):
     if member_name in ALLOWED_BACKUP_MEMBERS:
         return True
+    if member_name.startswith("files/"):
+        # Files that features keep next to the database (attachments, for example).
+        return True
     return member_name.startswith("notes/") and (
         member_name.endswith(".md") or member_name.endswith(".meta.json")
     )
+
+
+def write_backup_zip(zip_path):
+    """Write a complete backup: the database, the encryption key, the notes and whatever
+    files the features keep."""
+    from backend import features
+
+    db_path = paths.DB_PATH
+    secret_path = paths.secret_key_path()
+    notes_dir = paths.NOTES_DIR
+
+    with zipfile.ZipFile(zip_path, "w") as zipf:
+        if os.path.exists(db_path):
+            zipf.write(db_path, arcname="app.db")
+        if os.path.exists(secret_path):
+            zipf.write(secret_path, arcname="secret.key")
+        if os.path.isdir(notes_dir):
+            for filename in os.listdir(notes_dir):
+                filepath = os.path.join(notes_dir, filename)
+                if os.path.isfile(filepath) and (filename.endswith(".md") or (filename.endswith(".meta.json"))):
+                    zipf.write(filepath, arcname=os.path.join("notes", filename))
+        for feature in features.all_features():
+            prefix = f"files/{feature.key}/"
+            for filepath, arcname in feature.backup_files() or []:
+                arcname = arcname.replace(os.sep, "/")
+                if arcname.startswith(prefix) and ".." not in arcname.split("/") and os.path.isfile(filepath):
+                    zipf.write(filepath, arcname=arcname)
+    return zip_path
 
 def extract_backup_zip(zip_path, extract_to=None):
     extract_to = extract_to or paths.HOME
@@ -49,6 +80,15 @@ def extract_backup_zip(zip_path, extract_to=None):
             os.makedirs(os.path.join(extract_to, "notes"), exist_ok=True)
             for filename in os.listdir(notes_dir):
                 shutil.move(os.path.join(notes_dir, filename), os.path.join(extract_to, "notes", filename))
+
+        # Files that features keep: put the restored set in place of the current one.
+        files_dir = os.path.join(temp_dir, "files")
+        if os.path.isdir(files_dir):
+            os.makedirs(os.path.join(extract_to, "data"), exist_ok=True)
+            target = os.path.join(extract_to, "data", "files")
+            if os.path.isdir(target):
+                shutil.rmtree(target)
+            shutil.move(files_dir, target)
 
         # Clean up
         shutil.rmtree(temp_dir)

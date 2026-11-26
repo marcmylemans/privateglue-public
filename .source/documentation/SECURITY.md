@@ -10,6 +10,17 @@ Last reviewed: 2026-11-14.
   they are shown, and a Content-Security-Policy stops injected script from running.
 - Sign-up is closed after the first account. Logins are rate limited per address and per
   username. Changing a password signs out all other sessions of that account.
+- Two-factor sign-in (TOTP) with recovery codes. An admin can require it for admins or for
+  everyone. The secret is encrypted, recovery codes are stored as salted hashes, a code works
+  once, and the password alone gives access to nothing for an account that has it on.
+- An activity log records who opened a credential, showed or copied a secret, changed or
+  deleted something, signed in or failed to. No password, code or key is ever written to it.
+- One-time code secrets, extra fields and previous passwords on a credential are encrypted
+  the same way as its password.
+- Attachments are stored under a random name and only ever sent as a download
+  (`Content-Disposition: attachment`, `application/octet-stream`, `nosniff`), so an uploaded
+  HTML or SVG file cannot run script on the app's origin.
+- An address on a credential only becomes a link for `https`, `http`, `ssh` and `rdp`.
 - The container runs as an unprivileged user and refuses to start without `SECRET_KEY`.
 
 ## What you have to do when it is reachable from the internet
@@ -50,8 +61,14 @@ the host firewall or a reverse proxy.
 
 These are not fixed in the app today. They matter most when you run it for other people.
 
-- **No two-factor sign-in** and no single sign-on.
-- **No audit log**: the app does not record who viewed which password or who changed what.
+- **No single sign-on.** Two-factor sign-in is off until a user turns it on or an admin
+  requires it.
+- **The activity log can be read but not sealed.** Someone with access to the database file
+  can change it. It is kept for 12 months and stores IP addresses and the username typed at
+  a failed sign-in.
+- **Attachments and notes are not encrypted at rest.**
+- **A lone admin who loses both phone and recovery codes cannot be reset from inside the
+  app.** Keep a second admin account.
 - **One environment per install.** There are no separate customers or teams inside one
   install. Run one container with its own data per customer.
 - **The app makes outbound connections to addresses its users enter**: SNMP and the Proxmox

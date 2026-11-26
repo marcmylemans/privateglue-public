@@ -15,6 +15,8 @@ class Credential(db.Model):
     username = db.Column(db.String(255), nullable=True)
     _password = db.Column("password", db.LargeBinary, nullable=False)
     notes = db.Column(db.Text, nullable=True)
+    # Where the login is used (https://10.0.10.11:8006). Owned by the "address" feature.
+    address = db.Column(db.String(500), nullable=True)
 
     # Relationship with devices (many-to-many)
     devices = db.relationship(
@@ -23,7 +25,7 @@ class Credential(db.Model):
         backref="credentials"
     )
 
-    def __init__(self, title, username, password, notes):
+    def __init__(self, title, username=None, password="", notes=None):
         self.title = title
         self.username = username
         self.password = password

@@ -1,0 +1,7 @@
+/* Dates to watch */
+.dates-chip, .dates-chip:hover { border-color: transparent; }
+.dates-chip.dates-danger { background: rgba(var(--bs-danger-rgb), .12); color: var(--bs-danger-text-emphasis); }
+.dates-chip.dates-warning { background: rgba(var(--bs-warning-rgb), .16); color: var(--bs-warning-text-emphasis); }
+.dates-chip.dates-quiet { background: var(--pg-muted-bg); color: var(--bs-secondary-color); }
+.dates-head .form-label { margin-bottom: .25rem; }
+.dates-row + .dates-row { border-top: 1px solid var(--pg-border); margin-top: .75rem; padding-top: .75rem; }
